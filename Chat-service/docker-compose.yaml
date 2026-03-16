@@ -23,6 +23,21 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+
+  redis:
+    image: redis:8
+    container_name: rt-chat-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --appendfsync everysec
   
   rt-chat-service:
     build:
@@ -39,8 +54,13 @@ services:
       RTCHAT_DB_NAME: ${RTCHAT_DB_NAME}
       RTCHAT_DB_USER: ${RTCHAT_DB_USER}
       RTCHAT_DB_PWD: ${RTCHAT_DB_PWD}
+      
+      RTCHAT_REDIS_HOST: redis
+      RTCHAT_REDIS_PORT: 6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     logging:
       driver: json-file
@@ -57,6 +77,8 @@ services:
 
 volumes:
   postgres_data_media:
+  redis_data:
+      driver: local
 
 networks:
   app-network:

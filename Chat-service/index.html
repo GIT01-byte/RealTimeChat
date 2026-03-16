@@ -8,7 +8,7 @@
         body { font-family: sans-serif; background: #1e1e2e; color: #cdd6f4; display: flex; flex-direction: column; align-items: center; padding: 40px 16px; min-height: 100vh; }
         h1 { margin-bottom: 24px; font-size: 1.4rem; color: #cba6f7; }
 
-        #setup { display: flex; gap: 8px; margin-bottom: 24px; }
+        #setup { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
         #setup input { padding: 8px 12px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; width: 160px; }
         button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
         #connectBtn { background: #a6e3a1; color: #1e1e2e; }
@@ -25,6 +25,7 @@
         .msg.sent { background: #45475a; align-self: flex-end; }
         .msg.received { background: #585b70; align-self: flex-start; }
         .msg.system { background: transparent; color: #6c7086; align-self: center; font-size: 0.8rem; font-style: italic; }
+        .msg .meta { font-size: 0.75rem; color: #6c7086; margin-bottom: 2px; }
 
         #inputRow { display: flex; gap: 8px; width: 100%; max-width: 640px; }
         #msgInput { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; font-size: 0.95rem; }
@@ -36,7 +37,8 @@
     <h1>Real-Time Chat</h1>
 
     <div id="setup">
-        <input type="number" id="clientId" placeholder="Client ID" value="1" min="1" />
+        <input type="number" id="roomId" placeholder="Room ID" value="1" min="1" />
+        <input type="text" id="clientName" placeholder="Ваше имя" value="User" />
         <button id="connectBtn">Подключиться</button>
         <button id="disconnectBtn">Отключиться</button>
     </div>
@@ -54,9 +56,12 @@
 
     <script>
         const BASE_URL = 'http://localhost:8001/real_time_chat';
-        const WS_URL  = 'ws://localhost:8001/real_time_chat';
+        const WS_URL   = 'ws://localhost:8001/real_time_chat';
 
         let ws = null;
+        let myName = '';
+        let myId = null;
+        let connected = false;
 
         const statusEl      = document.getElementById('status');
         const messagesEl    = document.getElementById('messages');
@@ -64,39 +69,66 @@
         const sendBtn       = document.getElementById('sendBtn');
         const connectBtn    = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
-        const clientIdInput = document.getElementById('clientId');
+        const roomIdInput   = document.getElementById('roomId');
+        const clientNameInput = document.getElementById('clientName');
 
-        function addMessage(text, type = 'system') {
+        function addMessage(text, type = 'system', sender = null) {
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            div.textContent = text;
+            if (sender) {
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = sender;
+                div.appendChild(meta);
+            }
+            const content = document.createElement('div');
+            content.textContent = text;
+            div.appendChild(content);
             messagesEl.appendChild(div);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
         function setConnected(connected) {
-            msgInput.disabled  = !connected;
-            sendBtn.disabled   = !connected;
-            connectBtn.style.display    = connected ? 'none' : '';
-            disconnectBtn.style.display = connected ? '' : 'none';
-            clientIdInput.disabled = connected;
-            statusEl.className = connected ? 'connected' : '';
-            statusEl.textContent = connected ? `Подключён как Client #${clientIdInput.value}` : 'Не подключён';
+            msgInput.disabled             = !connected;
+            sendBtn.disabled              = !connected;
+            connectBtn.style.display      = connected ? 'none' : '';
+            disconnectBtn.style.display   = connected ? '' : 'none';
+            roomIdInput.disabled          = connected;
+            clientNameInput.disabled      = connected;
+            statusEl.className            = connected ? 'connected' : '';
+            statusEl.textContent          = connected
+                ? `Подключён как "${myName}" в комнате #${roomIdInput.value}`
+                : 'Не подключён';
         }
 
         connectBtn.addEventListener('click', () => {
-            const clientId = parseInt(clientIdInput.value);
-            if (!clientId || clientId < 1) return;
+            const roomId = parseInt(roomIdInput.value);
+            const name   = clientNameInput.value.trim();
+            if (!roomId || roomId < 1 || !name) return;
 
-            ws = new WebSocket(`${WS_URL}/ws/${clientId}`);
+            myName = name;
+            ws = new WebSocket(`${WS_URL}/ws/${roomId}/${encodeURIComponent(name)}`);
 
             ws.onopen = () => {
                 setConnected(true);
-                addMessage('Соединение установлено', 'system');
+                myId = null;
+                connected = false;
             };
 
             ws.onmessage = (event) => {
-                addMessage(event.data, 'received');
+                // Первое сообщение — plain text с UUID от сервера
+                if (!connected) {
+                    const match = event.data.match(/Client with ID ([\w-]+) connected/);
+                    if (match) {
+                        myId = match[1];
+                        connected = true;
+                        addMessage(`Вы вошли в комнату #${roomId} как "${myName}" (ID: ${myId})`, 'system');
+                        return;
+                    }
+                }
+                const data = JSON.parse(event.data);
+                const isMine = data.author_id === myId;
+                addMessage(data.text, isMine ? 'sent' : 'received', isMine ? null : data.author_name ?? 'Unknown');
             };
 
             ws.onclose = () => {
@@ -106,21 +138,18 @@
             };
 
             ws.onerror = () => {
-                statusEl.className = 'error';
+                statusEl.className   = 'error';
                 statusEl.textContent = 'Ошибка подключения';
                 addMessage('Ошибка WebSocket', 'system');
             };
         });
 
-        disconnectBtn.addEventListener('click', () => {
-            ws?.close();
-        });
+        disconnectBtn.addEventListener('click', () => ws?.close());
 
         function sendMessage() {
             const text = msgInput.value.trim();
             if (!text || !ws) return;
             ws.send(text);
-            addMessage(text, 'sent');
             msgInput.value = '';
         }
 
@@ -129,7 +158,7 @@
 
         document.getElementById('healthBtn').addEventListener('click', async () => {
             try {
-                const res = await fetch(`${BASE_URL}/health_check/`);
+                const res  = await fetch(`${BASE_URL}/health_check/`);
                 const data = await res.json();
                 addMessage(`[health_check] ${JSON.stringify(data)}`, 'system');
             } catch (e) {

@@ -50,6 +50,15 @@ class DatabaseSettings(BaseModel):
         return f"postgresql+asyncpg://{self.user}:{self.pwd}@{self.host}:{self.port}/{self.name}"
 
 
+class RedisSettings(BaseModel):
+    host: str
+    port: int
+
+    @property
+    def REDIS_URL(self):
+        return f"redis://{self.host}:{self.port}/1"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(ENV_PATH),
@@ -60,6 +69,7 @@ class Settings(BaseSettings):
     app: AppConfig
     api: ApiPrefix = ApiPrefix()
     db: DatabaseSettings
+    redis: RedisSettings
 
 
 settings = Settings()  # type: ignore
