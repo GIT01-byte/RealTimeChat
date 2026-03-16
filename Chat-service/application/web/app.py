@@ -10,7 +10,7 @@ from fastapi.responses import ORJSONResponse
 from application.di.containers import chat_api_container
 from application.utils.errors_handlers import register_errors_handlers
 from application.utils.logging import logger
-from application.web.views.v1.media import router as api_router
+from application.web.views.v1.chat import router as api_router
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
 tracemalloc.start()
@@ -30,7 +30,9 @@ def create_app() -> FastAPI:
     )
 
     origins = [
-        "http://127.0.0.1",  # TODO сдеалть загрузку из env переменных
+        "http://127.0.0.1",
+        "http://localhost",
+        "http://localhost:8001",
     ]
 
     app.add_middleware(

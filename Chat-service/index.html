@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Chat</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #1e1e2e; color: #cdd6f4; display: flex; flex-direction: column; align-items: center; padding: 40px 16px; min-height: 100vh; }
+        h1 { margin-bottom: 24px; font-size: 1.4rem; color: #cba6f7; }
+
+        #setup { display: flex; gap: 8px; margin-bottom: 24px; }
+        #setup input { padding: 8px 12px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; width: 160px; }
+        button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
+        #connectBtn { background: #a6e3a1; color: #1e1e2e; }
+        #disconnectBtn { background: #f38ba8; color: #1e1e2e; display: none; }
+
+        #status { margin-bottom: 16px; font-size: 0.85rem; color: #6c7086; }
+        #status.connected { color: #a6e3a1; }
+        #status.error { color: #f38ba8; }
+
+        #healthBtn { background: #89b4fa; color: #1e1e2e; margin-bottom: 24px; }
+
+        #messages { width: 100%; max-width: 640px; background: #313244; border-radius: 12px; padding: 16px; height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; max-width: 80%; word-break: break-word; }
+        .msg.sent { background: #45475a; align-self: flex-end; }
+        .msg.received { background: #585b70; align-self: flex-start; }
+        .msg.system { background: transparent; color: #6c7086; align-self: center; font-size: 0.8rem; font-style: italic; }
+
+        #inputRow { display: flex; gap: 8px; width: 100%; max-width: 640px; }
+        #msgInput { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; font-size: 0.95rem; }
+        #sendBtn { background: #cba6f7; color: #1e1e2e; }
+        #sendBtn:disabled, #msgInput:disabled { opacity: 0.4; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Chat</h1>
+
+    <div id="setup">
+        <input type="number" id="clientId" placeholder="Client ID" value="1" min="1" />
+        <button id="connectBtn">Подключиться</button>
+        <button id="disconnectBtn">Отключиться</button>
+    </div>
+
+    <div id="status">Не подключён</div>
+
+    <button id="healthBtn">GET /health_check</button>
+
+    <div id="messages"></div>
+
+    <div id="inputRow">
+        <input type="text" id="msgInput" placeholder="Введите сообщение..." disabled />
+        <button id="sendBtn" disabled>Отправить</button>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8001/real_time_chat';
+        const WS_URL  = 'ws://localhost:8001/real_time_chat';
+
+        let ws = null;
+
+        const statusEl      = document.getElementById('status');
+        const messagesEl    = document.getElementById('messages');
+        const msgInput      = document.getElementById('msgInput');
+        const sendBtn       = document.getElementById('sendBtn');
+        const connectBtn    = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const clientIdInput = document.getElementById('clientId');
+
+        function addMessage(text, type = 'system') {
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.textContent = text;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function setConnected(connected) {
+            msgInput.disabled  = !connected;
+            sendBtn.disabled   = !connected;
+            connectBtn.style.display    = connected ? 'none' : '';
+            disconnectBtn.style.display = connected ? '' : 'none';
+            clientIdInput.disabled = connected;
+            statusEl.className = connected ? 'connected' : '';
+            statusEl.textContent = connected ? `Подключён как Client #${clientIdInput.value}` : 'Не подключён';
+        }
+
+        connectBtn.addEventListener('click', () => {
+            const clientId = parseInt(clientIdInput.value);
+            if (!clientId || clientId < 1) return;
+
+            ws = new WebSocket(`${WS_URL}/ws/${clientId}`);
+
+            ws.onopen = () => {
+                setConnected(true);
+                addMessage('Соединение установлено', 'system');
+            };
+
+            ws.onmessage = (event) => {
+                addMessage(event.data, 'received');
+            };
+
+            ws.onclose = () => {
+                setConnected(false);
+                addMessage('Соединение закрыто', 'system');
+                ws = null;
+            };
+
+            ws.onerror = () => {
+                statusEl.className = 'error';
+                statusEl.textContent = 'Ошибка подключения';
+                addMessage('Ошибка WebSocket', 'system');
+            };
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            ws?.close();
+        });
+
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text || !ws) return;
+            ws.send(text);
+            addMessage(text, 'sent');
+            msgInput.value = '';
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        document.getElementById('healthBtn').addEventListener('click', async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/health_check/`);
+                const data = await res.json();
+                addMessage(`[health_check] ${JSON.stringify(data)}`, 'system');
+            } catch (e) {
+                addMessage(`[health_check] Ошибка: ${e.message}`, 'system');
+            }
+        });
+    </script>
+</body>
+</html>

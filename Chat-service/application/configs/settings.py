@@ -55,7 +55,7 @@ class Settings(BaseSettings):
         env_file=str(ENV_PATH),
         case_sensitive=False,
         env_nested_delimiter="_",
-        env_prefix="MEDIA_",
+        env_prefix="RTCHAT_",
     )
     app: AppConfig
     api: ApiPrefix = ApiPrefix()

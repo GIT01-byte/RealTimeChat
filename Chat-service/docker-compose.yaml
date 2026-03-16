@@ -32,13 +32,13 @@ services:
     ports:
       - "8001:8001"
     environment:
-      MEDIA_APP_MODE: ${RTCHAT_APP_MODE}
+      RTCHAT_APP_MODE: ${RTCHAT_APP_MODE}
 
-      MEDIA_DB_HOST: postgres
-      MEDIA_DB_PORT: 5432
-      MEDIA_DB_NAME: ${RTCHAT_DB_NAME}
-      MEDIA_DB_USER: ${RTCHAT_DB_USER}
-      MEDIA_DB_PWD: ${RTCHAT_DB_PWD}
+      RTCHAT_DB_HOST: postgres
+      RTCHAT_DB_PORT: 5432
+      RTCHAT_DB_NAME: ${RTCHAT_DB_NAME}
+      RTCHAT_DB_USER: ${RTCHAT_DB_USER}
+      RTCHAT_DB_PWD: ${RTCHAT_DB_PWD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,7 +50,7 @@ services:
       [
         "bash",
         "-c",
-        "poetry run && alembic upgrade head && python -m application.web",
+        "alembic upgrade head && python -m application.web",
       ]
     networks:
       - app-network
