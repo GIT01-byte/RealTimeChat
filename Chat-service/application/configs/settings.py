@@ -78,6 +78,7 @@ if settings:
     print(f"-------- {settings.app.name} --------")
     print(f"INFO:     Run mode: {settings.app.mode}")
     print(f"INFO:     Database url: {settings.db.DB_URL_asyncpg}")
+    print(f"INFO:     Redis url: {settings.redis.REDIS_URL}")
     print("-------------------------------------")
     print()
 else:

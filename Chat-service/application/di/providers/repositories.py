@@ -1,16 +1,15 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from application.repositories.files_outbox_repository import FilesOutboxRepository
-# from application.repositories.files_repository import FileRepository
+from application.repositories.chat_messages_repo import ChatMessagesRepo
+from application.repositories.chat_rooms_repo import ChatRoomsRepo
 
 
 class RepositoryProvider(Provider):
-    pass
-    # @provide(scope=Scope.REQUEST)
-    # def get_outbox_message_repo(self, session: AsyncSession) -> FilesOutboxRepository:
-    #     return FilesOutboxRepository(session=session)
+    @provide(scope=Scope.REQUEST)
+    def get_chat_rooms_repo(self, session: AsyncSession) -> ChatRoomsRepo:
+        return ChatRoomsRepo(session=session)
 
-    # @provide(scope=Scope.REQUEST)
-    # def get_files_repo(self, session: AsyncSession) -> FileRepository:
-    #     return FileRepository(session=session)
+    @provide(scope=Scope.REQUEST)
+    def get_chat_messages_repo(self, session: AsyncSession) -> ChatMessagesRepo:
+        return ChatMessagesRepo(session=session)

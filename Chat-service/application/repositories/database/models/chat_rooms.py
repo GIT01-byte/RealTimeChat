@@ -19,6 +19,8 @@ class ChatRooms(Base):
     title: Mapped[str] = mapped_column(String(256), nullable=False)
     description: Mapped[str] = mapped_column(String(1024), nullable=True)
 
+    owner_id: Mapped[UUID] = mapped_column(nullable=False)
+
     members_uuids: Mapped[list_obj_uuids]
     messages_uuids: Mapped[list_obj_uuids]
 
