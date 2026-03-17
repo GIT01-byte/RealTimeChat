@@ -5,7 +5,7 @@ from sqlalchemy.orm import (
 )
 
 from application.configs.settings import settings
-from application.repositories.database.crud.db_crud import intpk
+from application.repositories.database.mixins.intpk import intpk
 
 
 class Base(DeclarativeBase):
