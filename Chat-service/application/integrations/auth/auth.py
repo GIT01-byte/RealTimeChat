@@ -1,7 +1,7 @@
 import httpx
 from fastapi import HTTPException, Request, status
 
-from .schemas import RequestUserData
+from .schemas import UserData
 
 
 async def get_current_user(request: Request):
@@ -34,7 +34,7 @@ async def get_current_user(request: Request):
             response_data: dict = login_response.json()
             print(f"INFO:    get_current_user обработал - {response_data}")
 
-            return RequestUserData(
+            return UserData(
                 user_id=response_data["user_db"]["id"],
                 username=response_data["user_db"]["username"],
                 email=response_data["user_db"]["email"],
