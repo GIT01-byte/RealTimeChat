@@ -1,0 +1,115 @@
+{
+  "$schema": "https://www.krakend.io/schema/v3.json",
+  "version": 3,
+  "timeout": "3000ms",
+  "port": 8080,
+  "cache_ttl": "0s",
+  "extra_config": {
+    "router": {
+      "auto_options": true
+    },
+    "security/cors": {
+      "allow_origins": [
+        "*"
+      ],
+      "allow_methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH"
+      ],
+      "allow_headers": [
+        "Origin",
+        "Authorization",
+        "Content-Type",
+        "Accept"
+      ],
+      "expose_headers": [
+        "Content-Length"
+      ],
+      "max_age": "12h"
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/users_service/health_check/",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/users/health_check",
+          "host": [
+            "http://notes-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/register/",
+      "method": "POST",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users/register/",
+          "host": [
+            "http://notes-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/login/",
+      "method": "POST",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users/login/",
+          "host": [
+            "http://notes-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/refresh_tokens/",
+      "method": "POST",
+      "output_encoding": "json",
+      "input_headers": ["Authorization"],
+      "backend": [
+        {
+          "url_pattern": "/users/tokens/refresh/",
+          "host": [
+            "http://notes-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/logout/",
+      "method": "POST",
+      "output_encoding": "json",
+      "input_headers": ["Authorization"],
+      "backend": [
+        {
+          "url_pattern": "/users/logout/",
+          "host": [
+            "http://notes-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/self_info/",
+      "method": "GET",
+      "input_headers": ["Authorization"],
+      "backend": [
+        {
+          "url_pattern": "/users/me/",
+          "host": [
+            "http://notes-users-service:8002"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -2,15 +2,14 @@
 import tracemalloc
 from contextlib import asynccontextmanager
 
-from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
-
 from application.di.containers import chat_api_container
 from application.utils.errors_handlers import register_errors_handlers
 from application.utils.logging import logger
 from application.web.views.v1.chat import router as api_router
+from dishka.integrations.fastapi import setup_dishka
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
 tracemalloc.start()
@@ -33,6 +32,7 @@ def create_app() -> FastAPI:
         "http://127.0.0.1",
         "http://localhost",
         "http://localhost:8001",
+        "http://127.0.0.1:5500",
     ]
 
     app.add_middleware(

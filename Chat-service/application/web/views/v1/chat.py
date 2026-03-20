@@ -1,85 +1,15 @@
-import datetime
-from typing import Any
 from uuid import UUID, uuid4
 
-from dishka.integrations.fastapi import inject
-from fastapi import (
-    APIRouter,
-)
+from fastapi import APIRouter
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.websockets import WebSocket
 
 from application.configs.settings import settings
+from application.core.chats.schemas.files import ChatClient, ChatMessage
+from application.repositories.chat_messages_repo import ChatMessagesRepo
 from application.utils.logging import logger
 
 router = APIRouter(prefix=settings.api.v1.service, tags=["Real Time Chat"])
-
-
-class ChatMessage:
-    def __init__(
-        self, author_id: UUID, author_name: str, text: str, time: datetime.datetime
-    ) -> None:
-        self.author_id: UUID = author_id
-        self.author_name: str = author_name
-        self.text: str = text
-        self.time: datetime.datetime = time
-
-
-class ChatClient:
-    def __init__(self, name: str, connection: WebSocket) -> None:
-        self.id: UUID = uuid4()
-        self.name: str = name
-        self.connection: WebSocket = connection
-        self.is_connected: bool = True
-
-    async def connect(self, websocket: WebSocket):
-        self.connection = websocket
-        await websocket.accept()
-        await websocket.send_text(f"Client with ID {self.id} connected")
-        logger.info(f"Client {self.name} connected")
-
-    async def disconnect(self, websocket: WebSocket):
-        if self.is_connected:
-            self.is_connected = False
-            await websocket.close()
-            logger.info(f"Client {self.name} disconnected")
-
-    async def accept_data(self, data: dict[str, Any]):
-        if self.is_connected:
-            await self.connection.send_json(data)
-        else:
-            raise Exception("Client is not connected")
-
-
-class ChatRoom:
-    def __init__(self, room_id: int) -> None:
-        self.room_id = room_id
-        self.clients: list[ChatClient] = []
-        self.messages: list[ChatMessage] = []
-
-    async def create_room(self, client: ChatClient):
-        """Создание новой комнаты"""
-        self.clients.append(client)
-        logger.info(f"Client {client.name} created room {self.room_id}")
-
-    async def add_client(self, client: ChatClient):
-        self.clients.append(client)
-        logger.info(f"Client {client.name} joined room {self.room_id}")
-
-    async def broadcast(self, msg: ChatMessage):
-        logger.info(f"[{msg.time}] {msg.author_id}: {msg.text}")
-        self.messages.append(msg)
-        for client in self.clients:
-            data = {
-                "author_id": str(msg.author_id),
-                "author_name": msg.author_name,
-                "text": msg.text,
-                "time": str(msg.time),
-            }
-            await client.accept_data(data)
-
-
-class ChatMenager:  # TODO сделать чтобы он отвечал за корректные соединения и подключения комнат и пользователей
-    pass
 
 
 # ----- Основные API ендпоинты -----
@@ -88,23 +18,62 @@ async def health_check():
     return {"success": "Сервис Real-Time чата запущен"}
 
 
+class RoomConnection:
+    """ "
+    Класс активных подключений к комнате
+    """
+
+    def __init__(self, room_id: UUID) -> None:
+        self.active_connections: dict[UUID, WebSocket] = {}
+        self.room_id = room_id
+
+    async def add_client(self, client: ChatClient):
+        """Подключение клиента к комнате"""
+        await client.websocket.accept()
+        self.active_connections[client.client_id] = client.websocket
+
+    async def remove_client(self, client_id: UUID):
+        """Отключение клиента от комнаты"""
+        del self.active_connections[client_id]
+
+    def get_all_connections(self):
+        return list(self.active_connections.values())
+
+    async def broadcast(self, message: ChatMessage):
+        for client in self.active_connections.values():
+            await client.send_json(data=message.model_dump(mode="json"))
+
+
 @router.websocket("/ws/{room_id}/{client_name}")
-@inject
-async def ws(websocket: WebSocket, room_id: int, client_name: str):
-    """
-    1) Принимает websocket соединение
-    2) Создает нового клиента
-    3) Добавляет клиента в комнату
-    4) Передает управление обработчику сообщений
-    """
-    client = ChatClient(client_name, websocket)
-    await client.connect(websocket)
-    room = ChatRoom(room_id)
+async def ws(
+    websocket: WebSocket,
+    room_id: UUID,
+    client_name: str,
+):
+    client_id = uuid4()
+    client = ChatClient(
+        client_id=client_id, client_name=client_name, websocket=websocket
+    )
+    room = RoomConnection(room_id)
     await room.add_client(client)
-    while True:
-        data = await websocket.receive_text()
-        msg = ChatMessage(client.id, client.name, data, datetime.datetime.now())
-        await room.broadcast(msg)
+    logger.info(f"Клиент {client_name} подключился к комнате {room_id}")
+
+    session_maker: async_sessionmaker[AsyncSession] = websocket.app.state.session_maker
+    async with session_maker() as session:
+        chat_messages_repo = ChatMessagesRepo(session=session)
+        while True:
+            data = await websocket.receive_text()
+            msg_db = await chat_messages_repo.create(
+                author_id=client.client_id, room_id=room_id, text=data
+            )
+            await session.commit()
+            msg = ChatMessage(
+                author_id=msg_db.author_id,
+                author_name=client_name,
+                text=msg_db.text,
+                time=msg_db.created_at,
+            )
+            await room.broadcast(msg)
 
 
 # ----- Вспомогательные API ендпоинты -----

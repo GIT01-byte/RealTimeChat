@@ -1,0 +1,17 @@
+fastapi[standard]
+uvicorn[standard]
+orjson
+pydantic
+pydantic-settings
+python-multipart
+loguru
+sqlalchemy
+asyncpg
+sqlalchemy-utc
+alembic
+prometheus-fastapi-instrumentator
+pyjwt
+cryptography
+redis
+sqladmin
+email-validator

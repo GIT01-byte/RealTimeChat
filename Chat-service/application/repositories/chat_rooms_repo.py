@@ -40,10 +40,16 @@ class ChatRoomsRepo:
             return new_room
         except SQLAlchemyError as e:
             logger.exception(f"Ошибка БД при создании комнаты title={title!r}: {e}")
-            raise RepositoryInternalError("Failed to create chat room due to a database error.") from e
+            raise RepositoryInternalError(
+                "Failed to create chat room due to a database error."
+            ) from e
         except Exception as e:
-            logger.exception(f"Неожиданная ошибка при создании комнаты title={title!r}: {e}")
-            raise RepositoryInternalError("Failed to create chat room due to an unexpected error.") from e
+            logger.exception(
+                f"Неожиданная ошибка при создании комнаты title={title!r}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to create chat room due to an unexpected error."
+            ) from e
 
     async def add_member(
         self,
@@ -60,18 +66,78 @@ class ChatRoomsRepo:
                 raise EntityNotFoundError(f"Chat room {room_uuid} not found.")
 
             if member_uuid in room_obj.members_uuids:
-                logger.warning(f"Участник уже в комнате: member_uuid={member_uuid}, room_uuid={room_uuid}")
-                raise DataConflictError(f"Member {member_uuid} already exists in room {room_uuid}.")
+                logger.warning(
+                    f"Участник уже в комнате: member_uuid={member_uuid}, room_uuid={room_uuid}"
+                )
+                raise DataConflictError(
+                    f"Member {member_uuid} already exists in room {room_uuid}."
+                )
 
             room_obj.members_uuids.append(member_uuid)
             flag_modified(room_obj, "members_uuids")
-            logger.info(f"Участник добавлен: member_uuid={member_uuid}, room_uuid={room_uuid}")
+            logger.info(
+                f"Участник добавлен: member_uuid={member_uuid}, room_uuid={room_uuid}"
+            )
             return member_uuid
         except BaseAPIException:
             raise
         except SQLAlchemyError as e:
-            logger.exception(f"Ошибка БД при добавлении участника member_uuid={member_uuid} в room_uuid={room_uuid}: {e}")
-            raise RepositoryInternalError("Failed to add member due to a database error.") from e
+            logger.exception(
+                f"Ошибка БД при добавлении участника member_uuid={member_uuid} в room_uuid={room_uuid}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to add member due to a database error."
+            ) from e
         except Exception as e:
-            logger.exception(f"Неожиданная ошибка при добавлении участника member_uuid={member_uuid} в room_uuid={room_uuid}: {e}")
-            raise RepositoryInternalError("Failed to add member due to an unexpected error.") from e
+            logger.exception(
+                f"Неожиданная ошибка при добавлении участника member_uuid={member_uuid} в room_uuid={room_uuid}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to add member due to an unexpected error."
+            ) from e
+
+    async def get_by_uuid(
+        self,
+        room_uuid: UUID,
+    ) -> ChatRooms:
+        try:
+            result = await self.session.execute(
+                select(ChatRooms).where(ChatRooms.uuid == room_uuid)
+            )
+            room_obj = result.scalar_one_or_none()
+            if not room_obj:
+                logger.warning(f"Комната не найдена: room_uuid={room_uuid}")
+                raise EntityNotFoundError(f"Chat room {room_uuid} not found.")
+            return room_obj
+        except BaseAPIException:
+            raise
+        except SQLAlchemyError as e:
+            logger.exception(
+                f"Ошибка БД при получении комнаты room_uuid={room_uuid}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to get chat room due to a database error."
+            ) from e
+        except Exception as e:
+            logger.exception(
+                f"Неожиданная ошибка при получении комнаты room_uuid={room_uuid}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to get chat room due to an unexpected error."
+            ) from e
+
+    async def get_all_rooms(self) -> list[ChatRooms]:
+        try:
+            result = await self.session.execute(select(ChatRooms))
+            rooms_list = result.scalars().all()
+            return list(rooms_list)
+        except SQLAlchemyError as e:
+            logger.exception(f"Ошибка БД при получении списка комнат: {e}")
+            raise RepositoryInternalError(
+                "Failed to get chat rooms due to a database error."
+            ) from e
+        except Exception as e:
+            logger.exception(f"Неожиданная ошибка при получении списка комнат: {e}")
+            raise RepositoryInternalError(
+                "Failed to get chat rooms due to an unexpected error."
+            ) from e

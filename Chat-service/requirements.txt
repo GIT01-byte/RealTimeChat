@@ -1,0 +1,12 @@
+fastapi[standard]
+uvicorn
+websockets
+sqlalchemy
+asyncpg
+pydantic
+pydantic-settings
+loguru
+alembic
+dishka
+orjson
+redis

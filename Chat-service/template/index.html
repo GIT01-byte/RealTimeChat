@@ -9,10 +9,13 @@
         h1 { margin-bottom: 24px; font-size: 1.4rem; color: #cba6f7; }
 
         #setup { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
-        #setup input { padding: 8px 12px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; width: 160px; }
+        #setup input { padding: 8px 12px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; }
+        #roomId { width: 300px; }
+        #clientName { width: 140px; }
         button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
         #connectBtn { background: #a6e3a1; color: #1e1e2e; }
         #disconnectBtn { background: #f38ba8; color: #1e1e2e; display: none; }
+        #genUuidBtn { background: #45475a; color: #cdd6f4; font-size: 0.8rem; padding: 8px 10px; }
 
         #status { margin-bottom: 16px; font-size: 0.85rem; color: #6c7086; }
         #status.connected { color: #a6e3a1; }
@@ -25,7 +28,7 @@
         .msg.sent { background: #45475a; align-self: flex-end; }
         .msg.received { background: #585b70; align-self: flex-start; }
         .msg.system { background: transparent; color: #6c7086; align-self: center; font-size: 0.8rem; font-style: italic; }
-        .msg .meta { font-size: 0.75rem; color: #6c7086; margin-bottom: 2px; }
+        .msg .meta { font-size: 0.72rem; color: #6c7086; margin-bottom: 3px; }
 
         #inputRow { display: flex; gap: 8px; width: 100%; max-width: 640px; }
         #msgInput { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; font-size: 0.95rem; }
@@ -37,7 +40,8 @@
     <h1>Real-Time Chat</h1>
 
     <div id="setup">
-        <input type="number" id="roomId" placeholder="Room ID" value="1" min="1" />
+        <input type="text" id="roomId" placeholder="Room UUID" />
+        <button id="genUuidBtn">Генерировать UUID</button>
         <input type="text" id="clientName" placeholder="Ваше имя" value="User" />
         <button id="connectBtn">Подключиться</button>
         <button id="disconnectBtn">Отключиться</button>
@@ -58,28 +62,38 @@
         const BASE_URL = 'http://localhost:8001/real_time_chat';
         const WS_URL   = 'ws://localhost:8001/real_time_chat';
 
-        let ws = null;
-        let myName = '';
-        let myId = null;
-        let connected = false;
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-        const statusEl      = document.getElementById('status');
-        const messagesEl    = document.getElementById('messages');
-        const msgInput      = document.getElementById('msgInput');
-        const sendBtn       = document.getElementById('sendBtn');
-        const connectBtn    = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-        const roomIdInput   = document.getElementById('roomId');
+        let ws     = null;
+        let myName = '';
+        let myId   = null;
+
+        const statusEl        = document.getElementById('status');
+        const messagesEl      = document.getElementById('messages');
+        const msgInput        = document.getElementById('msgInput');
+        const sendBtn         = document.getElementById('sendBtn');
+        const connectBtn      = document.getElementById('connectBtn');
+        const disconnectBtn   = document.getElementById('disconnectBtn');
+        const roomIdInput     = document.getElementById('roomId');
         const clientNameInput = document.getElementById('clientName');
 
-        function addMessage(text, type = 'system', sender = null) {
+        document.getElementById('genUuidBtn').addEventListener('click', () => {
+            roomIdInput.value = crypto.randomUUID();
+        });
+
+        function formatTime(isoStr) {
+            const d = new Date(isoStr);
+            return d.toLocaleTimeString();
+        }
+
+        function addMessage(text, type = 'system', meta = null) {
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            if (sender) {
-                const meta = document.createElement('div');
-                meta.className = 'meta';
-                meta.textContent = sender;
-                div.appendChild(meta);
+            if (meta) {
+                const m = document.createElement('div');
+                m.className = 'meta';
+                m.textContent = meta;
+                div.appendChild(m);
             }
             const content = document.createElement('div');
             content.textContent = text;
@@ -88,47 +102,48 @@
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
-        function setConnected(connected) {
-            msgInput.disabled             = !connected;
-            sendBtn.disabled              = !connected;
-            connectBtn.style.display      = connected ? 'none' : '';
-            disconnectBtn.style.display   = connected ? '' : 'none';
-            roomIdInput.disabled          = connected;
-            clientNameInput.disabled      = connected;
-            statusEl.className            = connected ? 'connected' : '';
-            statusEl.textContent          = connected
-                ? `Подключён как "${myName}" в комнате #${roomIdInput.value}`
+        function setConnected(state) {
+            msgInput.disabled           = !state;
+            sendBtn.disabled            = !state;
+            connectBtn.style.display    = state ? 'none' : '';
+            disconnectBtn.style.display = state ? '' : 'none';
+            roomIdInput.disabled        = state;
+            clientNameInput.disabled    = state;
+            document.getElementById('genUuidBtn').disabled = state;
+            statusEl.className   = state ? 'connected' : '';
+            statusEl.textContent = state
+                ? `Подключён как "${myName}" · комната ${roomIdInput.value}`
                 : 'Не подключён';
         }
 
         connectBtn.addEventListener('click', () => {
-            const roomId = parseInt(roomIdInput.value);
+            const roomId = roomIdInput.value.trim();
             const name   = clientNameInput.value.trim();
-            if (!roomId || roomId < 1 || !name) return;
+            if (!UUID_RE.test(roomId)) {
+                addMessage('Некорректный UUID комнаты', 'system');
+                return;
+            }
+            if (!name) return;
 
             myName = name;
+            myId   = null;
             ws = new WebSocket(`${WS_URL}/ws/${roomId}/${encodeURIComponent(name)}`);
 
             ws.onopen = () => {
                 setConnected(true);
-                myId = null;
-                connected = false;
+                addMessage(`Вы вошли в комнату ${roomId} как "${myName}"`, 'system');
             };
 
             ws.onmessage = (event) => {
-                // Первое сообщение — plain text с UUID от сервера
-                if (!connected) {
-                    const match = event.data.match(/Client with ID ([\w-]+) connected/);
-                    if (match) {
-                        myId = match[1];
-                        connected = true;
-                        addMessage(`Вы вошли в комнату #${roomId} как "${myName}" (ID: ${myId})`, 'system');
-                        return;
-                    }
-                }
-                const data = JSON.parse(event.data);
-                const isMine = data.author_id === myId;
-                addMessage(data.text, isMine ? 'sent' : 'received', isMine ? null : data.author_name ?? 'Unknown');
+                const raw = typeof event.data === 'string' && event.data.startsWith('"')
+                    ? JSON.parse(JSON.parse(event.data))
+                    : JSON.parse(event.data);
+                const isMine = raw.author_name === myName;
+                if (!myId && isMine) myId = data.author_id;
+                const meta = isMine
+                    ? formatTime(data.time)
+                    : `${data.author_name} · ${formatTime(data.time)}`;
+                addMessage(data.text, isMine ? 'sent' : 'received', meta);
             };
 
             ws.onclose = () => {

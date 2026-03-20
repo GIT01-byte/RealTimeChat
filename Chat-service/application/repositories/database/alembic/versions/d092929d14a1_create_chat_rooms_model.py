@@ -52,9 +52,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_chat_rooms")),
     )
-    op.create_index(
-        op.f("ix_chat_rooms_uuid"), "chat_rooms", ["uuid"], unique=True
-    )
+    op.create_index(op.f("ix_chat_rooms_uuid"), "chat_rooms", ["uuid"], unique=True)
     # ### end Alembic commands ###
 
 

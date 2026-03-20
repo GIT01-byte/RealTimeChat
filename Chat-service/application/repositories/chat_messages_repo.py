@@ -27,8 +27,16 @@ class ChatMessagesRepo:
             self.session.add(new_message)
             return new_message
         except SQLAlchemyError as e:
-            logger.exception(f"Ошибка БД при создании сообщения author_id={author_id}, room_id={room_id}: {e}")
-            raise RepositoryInternalError("Failed to create message due to a database error.") from e
+            logger.exception(
+                f"Ошибка БД при создании сообщения author_id={author_id}, room_id={room_id}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to create message due to a database error."
+            ) from e
         except Exception as e:
-            logger.exception(f"Неожиданная ошибка при создании сообщения author_id={author_id}, room_id={room_id}: {e}")
-            raise RepositoryInternalError("Failed to create message due to an unexpected error.") from e
+            logger.exception(
+                f"Неожиданная ошибка при создании сообщения author_id={author_id}, room_id={room_id}: {e}"
+            )
+            raise RepositoryInternalError(
+                "Failed to create message due to an unexpected error."
+            ) from e

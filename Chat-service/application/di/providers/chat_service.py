@@ -1,4 +1,4 @@
-from dishka import Provider, Scope, provide
+from dishka import Provider
 
 
 class ChatServiceProvider(Provider):

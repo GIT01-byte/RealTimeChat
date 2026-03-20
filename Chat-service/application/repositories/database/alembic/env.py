@@ -3,7 +3,7 @@ from logging.config import fileConfig
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -14,7 +14,7 @@ from alembic import context
 from application.repositories.database.models import Base
 from application.configs.settings import settings
 
-print(f'Metadata models keys: {Base.metadata.tables.keys()}')
+print(f"Metadata models keys: {Base.metadata.tables.keys()}")
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -35,6 +35,7 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 config.set_main_option("sqlalchemy.url", str(settings.db.DB_URL_asyncpg))
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аутентификация</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --background-color: #f8f9fa;
+            --text-color: #495057;
+            --border-color: #ced4da;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .auth-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--secondary-color);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box; /* Important! */
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+
+        .message {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        #userInfoData {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Стили для загрузки */
+        .loading {
+            opacity: 0.7;
+            cursor: wait;
+            position: relative;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin: -0.5em 0 0 -0.5em;
+            border-width: 0.3em;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, .15);
+            border-top-color: #007bff;
+            border-radius: 50%;
+            width: 1em;
+            height: 1em;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Стили для переключения между формами */
+        .form-switcher {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .form-switcher a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .form-switcher a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-container">
+        <h1>Аутентификация</h1>
+
+        <form id="loginForm">
+            <h2>Вход</h2>
+            <label for="loginUsername">Имя пользователя:</label>
+            <input type="text" id="loginUsername" name="username" required><br>
+            <label for="loginPassword">Пароль:</label>
+            <input type="password" id="loginPassword" name="password" required><br>
+            <button type="button" onclick="login()">Войти</button>
+            <p id="loginMessage" class="message"></p>
+        </form>
+
+        <form id="registerForm" style="display: none;">
+            <h2>Регистрация</h2>
+            <label for="registerUsername">Имя пользователя:</label>
+            <input type="text" id="registerUsername" name="username" required><br>
+            <label for="registerEmail">Электронная почта:</label>
+            <input type="email" id="registerEmail" name="email" required><br>
+            <label for="registerPassword">Пароль:</label>
+            <input type="password" id="registerPassword" name="password" required><br>
+            <button type="button" onclick="register()">Зарегистрироваться</button>
+            <p id="registerMessage" class="message"></p>
+        </form>
+
+        <div class="form-switcher">
+            <a href="#" onclick="toggleForm('loginForm', 'registerForm'); return false;" id="loginLink">Войти</a> |
+            <a href="#" onclick="toggleForm('registerForm', 'loginForm'); return false;" id="registerLink">Зарегистрироваться</a>
+        </div>
+
+        <form id="refreshTokenForm">
+            <h2>Обновить токен</h2>
+            <label for="refreshToken">Токен обновления:</label>
+            <input type="text" id="refreshToken" name="refresh_token"><br>
+            <button type="button" onclick="refreshToken()">Обновить</button>
+            <p id="refreshMessage" class="message"></p>
+        </form>
+
+        <button onclick="logout()">Выйти</button>
+
+        <div id="userInfo">
+            <h2>Информация о пользователе</h2>
+            <button onclick="getUserInfo()">Получить информацию о пользователе</button>
+            <pre id="userInfoData"></pre>
+        </div>
+
+    </div>
+
+    <script>
+    const API_ENDPOINT = 'http://localhost:8080/users';
+
+    function toggleForm(showFormId, hideFormId) {
+        document.getElementById(showFormId).style.display = 'block';
+        document.getElementById(hideFormId).style.display = 'none';
+    }
+
+    async function login() {
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        const loginButton = document.querySelector('#loginForm button');
+        const loginMessageElement = document.getElementById("loginMessage");
+
+        try {
+            loginButton.classList.add('loading');
+            loginMessageElement.textContent = "";
+
+            const formData = new URLSearchParams();
+            formData.append('grant_type', 'password');
+            formData.append('username', username);
+            formData.append('password', password);
+            formData.append('scope', '');
+            formData.append('client_id', '');
+            formData.append('client_secret', '');
+
+            const response = await fetch(`${API_ENDPOINT}/login/`, {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('refresh_token', data.refresh_token);
+                loginMessageElement.textContent = "Вход выполнен успешно";
+                loginMessageElement.className = "message success";
+            } else {
+                loginMessageElement.textContent = data.detail || "Ошибка входа";
+                loginMessageElement.className = "message error";
+                console.error('Ошибка входа:', data);
+            }
+        } catch (error) {
+            loginMessageElement.textContent = "Произошла сетевая ошибка.";
+            loginMessageElement.className = "message error";
+            console.error("Сетевая ошибка:", error);
+        } finally {
+            loginButton.classList.remove('loading');
+        }
+    }
+
+
+    async function register() {
+        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+        const registerButton = document.querySelector('#registerForm button');
+        const registerMessageElement = document.getElementById("registerMessage");
+
+        try {
+            registerButton.classList.add('loading');
+            registerMessageElement.textContent = "";
+
+            const data = {
+                username: username,
+                email: email,
+                profile: {}, // Можно добавить данные профиля
+                password: password
+            };
+
+            const response = await fetch(`${API_ENDPOINT}/register/`, {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const responseData = await response.json();
+
+            if (response.ok) {
+                registerMessageElement.textContent = "Регистрация прошла успешно";
+                registerMessageElement.className = "message success";
+                console.log('Регистрация прошла успешно');
+            } else {
+                registerMessageElement.textContent = responseData.detail || "Ошибка регистрации";
+                registerMessageElement.className = "message error";
+                console.error('Ошибка регистрации:', responseData);
+            }
+        } catch (error) {
+            registerMessageElement.textContent = "Произошла сетевая ошибка.";
+            registerMessageElement.className = "message error";
+            console.error("Сетевая ошибка:", error);
+        } finally {
+            registerButton.classList.remove('loading');
+        }
+    }
+
+    async function refreshToken() {
+        const refreshTokenValue = document.getElementById('refreshToken').value;
+        const refreshTokenButton = document.querySelector('#refreshTokenForm button');
+        const refreshMessageElement = document.getElementById("refreshMessage");
+
+        if (!refreshTokenValue) {
+            refreshMessageElement.textContent = "Необходим токен обновления.";
+            refreshMessageElement.className = "message error";
+            return;
+        }
+
+        try {
+            refreshTokenButton.classList.add('loading');
+            refreshMessageElement.textContent = "";
+
+            const data = {
+                refresh_token: refreshTokenValue
+            };
+
+
+            const response = await fetch(`${API_ENDPOINT}/tokens/refresh/`, {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const responseData = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('access_token', responseData.access_token);
+                localStorage.setItem('refresh_token', refreshTokenValue);
+                refreshMessageElement.textContent = "Токен обновлен успешно";
+                refreshMessageElement.className = "message success";
+            } else {
+                refreshMessageElement.textContent = responseData.detail || "Не удалось обновить токен";
+                refreshMessageElement.className = "message error";
+                console.error('Не удалось обновить токен:', responseData);
+            }
+        } catch (error) {
+            refreshMessageElement.textContent = "Произошла сетевая ошибка.";
+            refreshMessageElement.className = "message error";
+            console.error("Сетевая ошибка:", error);
+        } finally {
+            refreshTokenButton.classList.remove('loading');
+        }
+    }
+
+    async function getUserInfo() {
+        const accessToken = localStorage.getItem('access_token');
+        const userInfoElement = document.getElementById("userInfoData");
+
+        if (!accessToken) {
+            userInfoElement.textContent = "Токен доступа отсутствует. Войдите или обновите токен.";
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_ENDPOINT}/me/`, {
+                method: 'GET',
+                headers: {
+                    'accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                userInfoElement.textContent = JSON.stringify(data, null, 2);
+            } else {
+                userInfoElement.textContent = `Ошибка получения информации о пользователе: ${data.detail || response.statusText}`;
+                console.error('Ошибка получения информации о пользователе:', data);
+            }
+        } catch (error) {
+            userInfoElement.textContent = "Произошла сетевая ошибка.";
+            console.error("Сетевая ошибка:", error);
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        alert('Вы вышли из системы.');
+        document.getElementById("userInfoData").textContent = "";
+
+    }
+    </script>
+
+</body>
+
+</html>

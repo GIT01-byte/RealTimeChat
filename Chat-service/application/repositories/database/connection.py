@@ -14,7 +14,7 @@ engine: AsyncEngine = create_async_engine(
     pool_size=settings.db.pool_size,
     max_overflow=settings.db.max_overflow,
 )
-async_session: async_sessionmaker[AsyncSession] = async_sessionmaker(
+async_session_maker: async_sessionmaker[AsyncSession] = async_sessionmaker(
     bind=engine,
     autoflush=False,
     autocommit=False,
