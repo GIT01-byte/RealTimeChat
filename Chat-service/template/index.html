@@ -1,185 +1,149 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Real-Time Chat</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #1e1e2e; color: #cdd6f4; display: flex; flex-direction: column; align-items: center; padding: 40px 16px; min-height: 100vh; }
-        h1 { margin-bottom: 24px; font-size: 1.4rem; color: #cba6f7; }
-
-        #setup { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
-        #setup input { padding: 8px 12px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; }
-        #roomId { width: 300px; }
-        #clientName { width: 140px; }
-        button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
-        #connectBtn { background: #a6e3a1; color: #1e1e2e; }
-        #disconnectBtn { background: #f38ba8; color: #1e1e2e; display: none; }
-        #genUuidBtn { background: #45475a; color: #cdd6f4; font-size: 0.8rem; padding: 8px 10px; }
-
-        #status { margin-bottom: 16px; font-size: 0.85rem; color: #6c7086; }
-        #status.connected { color: #a6e3a1; }
-        #status.error { color: #f38ba8; }
-
-        #healthBtn { background: #89b4fa; color: #1e1e2e; margin-bottom: 24px; }
-
-        #messages { width: 100%; max-width: 640px; background: #313244; border-radius: 12px; padding: 16px; height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-        .msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; max-width: 80%; word-break: break-word; }
-        .msg.sent { background: #45475a; align-self: flex-end; }
-        .msg.received { background: #585b70; align-self: flex-start; }
-        .msg.system { background: transparent; color: #6c7086; align-self: center; font-size: 0.8rem; font-style: italic; }
-        .msg .meta { font-size: 0.72rem; color: #6c7086; margin-bottom: 3px; }
-
-        #inputRow { display: flex; gap: 8px; width: 100%; max-width: 640px; }
-        #msgInput { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; font-size: 0.95rem; }
-        #sendBtn { background: #cba6f7; color: #1e1e2e; }
-        #sendBtn:disabled, #msgInput:disabled { opacity: 0.4; cursor: not-allowed; }
-    </style>
+  <meta charset="UTF-8">
+  <title>RT Chat — Test</title>
+  <style>
+    body { font-family: monospace; max-width: 800px; margin: 20px auto; padding: 0 16px; }
+    section { border: 1px solid #ccc; padding: 12px; margin-bottom: 16px; border-radius: 6px; }
+    h3 { margin: 0 0 8px; }
+    input, textarea { width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 4px; }
+    button { margin-right: 6px; padding: 4px 10px; cursor: pointer; }
+    #messages { height: 200px; overflow-y: auto; border: 1px solid #aaa; padding: 8px; background: #f9f9f9; }
+    .msg { margin: 4px 0; }
+    .msg.incoming { color: #1a6e1a; }
+    .msg.outgoing { color: #1a1a8e; }
+    pre { background: #eee; padding: 8px; overflow-x: auto; font-size: 12px; }
+  </style>
 </head>
 <body>
-    <h1>Real-Time Chat</h1>
+  <h2>RT Chat — Test UI</h2>
 
-    <div id="setup">
-        <input type="text" id="roomId" placeholder="Room UUID" />
-        <button id="genUuidBtn">Генерировать UUID</button>
-        <input type="text" id="clientName" placeholder="Ваше имя" value="User" />
-        <button id="connectBtn">Подключиться</button>
-        <button id="disconnectBtn">Отключиться</button>
-    </div>
+  <!-- Токен -->
+  <section>
+    <h3>1. JWT токен</h3>
+    <input id="token" placeholder="Вставь Bearer токен (без слова Bearer)" />
+    <small>Получи токен через Users-service: POST /api/v1/auth/login</small>
+  </section>
 
-    <div id="status">Не подключён</div>
+  <!-- Health check -->
+  <section>
+    <h3>2. Health Check</h3>
+    <button onclick="healthCheck()">GET /health_check/</button>
+    <pre id="health-result">—</pre>
+  </section>
 
-    <button id="healthBtn">GET /health_check</button>
+  <!-- Список пользователей + текущий юзер -->
+  <section>
+    <h3>3. GET / — текущий пользователь + все юзеры</h3>
+    <button onclick="getChat()">GET /</button>
+    <pre id="chat-result">—</pre>
+  </section>
 
+  <!-- История сообщений -->
+  <section>
+    <h3>4. История сообщений с пользователем</h3>
+    <input id="history-user-id" placeholder="user_id собеседника" type="number" />
+    <button onclick="getMessages()">GET /messages/{user_id}</button>
+    <pre id="history-result">—</pre>
+  </section>
+
+  <!-- Отправка сообщения через REST -->
+  <section>
+    <h3>5. Отправить сообщение (REST POST)</h3>
+    <input id="send-recipient-id" placeholder="recipient_id" type="number" />
+    <input id="send-text" placeholder="Текст сообщения" />
+    <button onclick="sendMessage()">POST /messages</button>
+    <pre id="send-result">—</pre>
+  </section>
+
+  <!-- WebSocket -->
+  <section>
+    <h3>6. WebSocket /ws/{user_id}</h3>
+    <input id="ws-user-id" placeholder="Твой user_id" type="number" />
+    <button onclick="connectWS()">Подключиться</button>
+    <button onclick="disconnectWS()">Отключиться</button>
+    <span id="ws-status" style="color:gray">● отключён</span>
     <div id="messages"></div>
+  </section>
 
-    <div id="inputRow">
-        <input type="text" id="msgInput" placeholder="Введите сообщение..." disabled />
-        <button id="sendBtn" disabled>Отправить</button>
-    </div>
+  <script>
+    const API_URL = 'http://localhost:8001/real_time_chat'
+    const WS_URL = 'ws://localhost:8001/real_time_chat/ws'
+    let ws = null
 
-    <script>
-        const BASE_URL = 'http://localhost:8001/real_time_chat';
-        const WS_URL   = 'ws://localhost:8001/real_time_chat';
+    function getToken() {
+      return document.getElementById('token').value.trim()
+    }
 
-        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      }
+    }
 
-        let ws     = null;
-        let myName = '';
-        let myId   = null;
+    async function healthCheck() {
+      const res = await fetch(`${API_URL}/health_check/`)
+      document.getElementById('health-result').textContent = JSON.stringify(await res.json(), null, 2)
+    }
 
-        const statusEl        = document.getElementById('status');
-        const messagesEl      = document.getElementById('messages');
-        const msgInput        = document.getElementById('msgInput');
-        const sendBtn         = document.getElementById('sendBtn');
-        const connectBtn      = document.getElementById('connectBtn');
-        const disconnectBtn   = document.getElementById('disconnectBtn');
-        const roomIdInput     = document.getElementById('roomId');
-        const clientNameInput = document.getElementById('clientName');
+    async function getChat() {
+      const res = await fetch(`${API_URL}/`, { headers: authHeaders() })
+      document.getElementById('chat-result').textContent = JSON.stringify(await res.json(), null, 2)
+    }
 
-        document.getElementById('genUuidBtn').addEventListener('click', () => {
-            roomIdInput.value = crypto.randomUUID();
-        });
+    async function getMessages() {
+      const userId = document.getElementById('history-user-id').value
+      const res = await fetch(`${API_URL}/messages/${userId}`, { headers: authHeaders() })
+      document.getElementById('history-result').textContent = JSON.stringify(await res.json(), null, 2)
+    }
 
-        function formatTime(isoStr) {
-            const d = new Date(isoStr);
-            return d.toLocaleTimeString();
-        }
+    async function sendMessage() {
+      const recipientId = parseInt(document.getElementById('send-recipient-id').value)
+      const text = document.getElementById('send-text').value
+      const res = await fetch(`${API_URL}/messages`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ recipient_id: recipientId, text })
+      })
+      document.getElementById('send-result').textContent = JSON.stringify(await res.json(), null, 2)
+    }
 
-        function addMessage(text, type = 'system', meta = null) {
-            const div = document.createElement('div');
-            div.className = `msg ${type}`;
-            if (meta) {
-                const m = document.createElement('div');
-                m.className = 'meta';
-                m.textContent = meta;
-                div.appendChild(m);
-            }
-            const content = document.createElement('div');
-            content.textContent = text;
-            div.appendChild(content);
-            messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
+    function connectWS() {
+      const userId = document.getElementById('ws-user-id').value
+      if (!userId) return alert('Введи user_id')
+      ws = new WebSocket(`${WS_URL}/${userId}`)
 
-        function setConnected(state) {
-            msgInput.disabled           = !state;
-            sendBtn.disabled            = !state;
-            connectBtn.style.display    = state ? 'none' : '';
-            disconnectBtn.style.display = state ? '' : 'none';
-            roomIdInput.disabled        = state;
-            clientNameInput.disabled    = state;
-            document.getElementById('genUuidBtn').disabled = state;
-            statusEl.className   = state ? 'connected' : '';
-            statusEl.textContent = state
-                ? `Подключён как "${myName}" · комната ${roomIdInput.value}`
-                : 'Не подключён';
-        }
+      ws.onopen = () => {
+        document.getElementById('ws-status').textContent = '● подключён'
+        document.getElementById('ws-status').style.color = 'green'
+        addMessage('system', `WebSocket подключён (user_id=${userId})`)
+      }
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data)
+        addMessage('incoming', `От ${data.sender_id}: ${data.text}`)
+      }
+      ws.onclose = () => {
+        document.getElementById('ws-status').textContent = '● отключён'
+        document.getElementById('ws-status').style.color = 'gray'
+        addMessage('system', 'WebSocket отключён')
+      }
+      ws.onerror = (e) => addMessage('system', `Ошибка WS: ${e}`)
+    }
 
-        connectBtn.addEventListener('click', () => {
-            const roomId = roomIdInput.value.trim();
-            const name   = clientNameInput.value.trim();
-            if (!UUID_RE.test(roomId)) {
-                addMessage('Некорректный UUID комнаты', 'system');
-                return;
-            }
-            if (!name) return;
+    function disconnectWS() {
+      ws?.close()
+    }
 
-            myName = name;
-            myId   = null;
-            ws = new WebSocket(`${WS_URL}/ws/${roomId}/${encodeURIComponent(name)}`);
-
-            ws.onopen = () => {
-                setConnected(true);
-                addMessage(`Вы вошли в комнату ${roomId} как "${myName}"`, 'system');
-            };
-
-            ws.onmessage = (event) => {
-                const raw = typeof event.data === 'string' && event.data.startsWith('"')
-                    ? JSON.parse(JSON.parse(event.data))
-                    : JSON.parse(event.data);
-                const isMine = raw.author_name === myName;
-                if (!myId && isMine) myId = data.author_id;
-                const meta = isMine
-                    ? formatTime(data.time)
-                    : `${data.author_name} · ${formatTime(data.time)}`;
-                addMessage(data.text, isMine ? 'sent' : 'received', meta);
-            };
-
-            ws.onclose = () => {
-                setConnected(false);
-                addMessage('Соединение закрыто', 'system');
-                ws = null;
-            };
-
-            ws.onerror = () => {
-                statusEl.className   = 'error';
-                statusEl.textContent = 'Ошибка подключения';
-                addMessage('Ошибка WebSocket', 'system');
-            };
-        });
-
-        disconnectBtn.addEventListener('click', () => ws?.close());
-
-        function sendMessage() {
-            const text = msgInput.value.trim();
-            if (!text || !ws) return;
-            ws.send(text);
-            msgInput.value = '';
-        }
-
-        sendBtn.addEventListener('click', sendMessage);
-        msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-
-        document.getElementById('healthBtn').addEventListener('click', async () => {
-            try {
-                const res  = await fetch(`${BASE_URL}/health_check/`);
-                const data = await res.json();
-                addMessage(`[health_check] ${JSON.stringify(data)}`, 'system');
-            } catch (e) {
-                addMessage(`[health_check] Ошибка: ${e.message}`, 'system');
-            }
-        });
-    </script>
+    function addMessage(type, text) {
+      const div = document.createElement('div')
+      div.className = `msg ${type}`
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`
+      const box = document.getElementById('messages')
+      box.appendChild(div)
+      box.scrollTop = box.scrollHeight
+    }
+  </script>
 </body>
 </html>

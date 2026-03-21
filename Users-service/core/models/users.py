@@ -9,13 +9,12 @@ from datetime import datetime
 from typing import Any, List
 
 from sqlalchemy import (
+    JSON,
+    Boolean,
     DateTime,
     ForeignKey,
     String,
-    Boolean,
-    JSON,
 )
-
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -23,11 +22,12 @@ from sqlalchemy.orm import (
 )
 
 from core.models.base import Base
+
 from .mixins import (
-    intpk,
-    str_128,
-    str_64,
     created_at,
+    intpk,
+    str_64,
+    str_128,
     updated_at,
 )
 
@@ -68,7 +68,7 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not hasattr(self, "avatar") or self.avatar is None:
@@ -92,7 +92,7 @@ class RefreshToken(Base):
 
 class AvatarFiles(Base, FileBase):
     __tablename__ = "avatar"
-    
+
     id: Mapped[intpk]
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 

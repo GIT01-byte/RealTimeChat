@@ -46,14 +46,7 @@ def create_app() -> FastAPI:
     # Подключаем middleware для просмотра содержимого http запроса
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
-        logger.info("\n----------- New request -----------")
-        logger.info(f"Request: {request.method} {request.url}")
-        logger.info(f"Headers: {request.headers}")
-        try:
-            body = await request.json()
-            logger.info(f"Body: {body}\n")
-        except Exception as e:
-            logger.warning(f"Could not decode JSON body: {e}\n")
+        logger.info(f"Новый запрос: {request.method} {request.url}")
         response = await call_next(request)
         return response
 

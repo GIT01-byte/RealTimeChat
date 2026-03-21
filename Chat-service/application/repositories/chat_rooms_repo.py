@@ -36,7 +36,6 @@ class ChatRoomsRepo:
                 description=description,
             )
             self.session.add(new_room)
-            logger.info(f"Комната создана: title={title!r}, owner_id={owner_id}")
             return new_room
         except SQLAlchemyError as e:
             logger.exception(f"Ошибка БД при создании комнаты title={title!r}: {e}")
@@ -62,22 +61,15 @@ class ChatRoomsRepo:
             )
             room_obj = result.scalar_one_or_none()
             if not room_obj:
-                logger.warning(f"Комната не найдена: room_uuid={room_uuid}")
                 raise EntityNotFoundError(f"Chat room {room_uuid} not found.")
 
             if member_uuid in room_obj.members_uuids:
-                logger.warning(
-                    f"Участник уже в комнате: member_uuid={member_uuid}, room_uuid={room_uuid}"
-                )
                 raise DataConflictError(
                     f"Member {member_uuid} already exists in room {room_uuid}."
                 )
 
             room_obj.members_uuids.append(member_uuid)
             flag_modified(room_obj, "members_uuids")
-            logger.info(
-                f"Участник добавлен: member_uuid={member_uuid}, room_uuid={room_uuid}"
-            )
             return member_uuid
         except BaseAPIException:
             raise
@@ -106,7 +98,6 @@ class ChatRoomsRepo:
             )
             room_obj = result.scalar_one_or_none()
             if not room_obj:
-                logger.warning(f"Комната не найдена: room_uuid={room_uuid}")
                 raise EntityNotFoundError(f"Chat room {room_uuid} not found.")
             return room_obj
         except BaseAPIException:

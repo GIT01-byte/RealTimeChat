@@ -5,26 +5,23 @@ from uuid import UUID
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
-from typing import Optional
 from datetime import datetime
-
-from sqlalchemy import Sequence, or_, select, delete
-from sqlalchemy.exc import SQLAlchemyError
-from pydantic import EmailStr
+from typing import Optional
 
 from exceptions.exceptions import (
-    UserAlreadyExistsError,
     EntityNotFoundError,
     RepositoryInternalError,
+    UserAlreadyExistsError,
 )
+from integrations.files.schemas import NSFileUploadResponse
+from pydantic import EmailStr
+from sqlalchemy import delete, or_, select
+from sqlalchemy.exc import SQLAlchemyError
+from utils.logging import logger
+from utils.time_decorator import async_timed_report, time_all_methods
 
 from core.db.db_manager import db_manager
 from core.models.users import AvatarFiles, RefreshToken, User
-
-from integrations.files.schemas import NSFileUploadResponse
-
-from utils.logging import logger
-from utils.time_decorator import time_all_methods, sync_timed_report, async_timed_report
 
 
 @time_all_methods(async_timed_report())
@@ -186,6 +183,27 @@ class UsersRepo:
                 "Не удалось получить всех пользователей из-за неожиданной ошибки"
             ) from e
 
+    @staticmethod
+    async def get_all_users_data():
+        logger.debug("Попытка получить username и avatar всех пользователей")
+        try:
+            async with db_manager.session_factory() as session:
+                all_users_data = await session.scalars(select(User))
+                result = all_users_data.all()
+                users_data_list = [
+                    {"id": user.id, "username": user.username, "avatar": user.avatar}
+                    for user in result
+                ]
+                logger.debug(
+                    f"Получено записей username + avatar: {len(users_data_list)}"
+                )
+                return users_data_list
+        except SQLAlchemyError as e:
+            logger.exception("Ошибка БД при получении username и avatar пользователей")
+            raise RepositoryInternalError(
+                "Не удалось получить данные пользователей из-за ошибки базы данных"
+            ) from e
+
 
 class RefreshTokensRepo:
     @staticmethod
@@ -264,7 +282,9 @@ class RefreshTokensRepo:
                 query = delete(RefreshToken).where(RefreshToken.user_id == user_id)
                 result = await session.execute(query)
                 await session.commit()
-                logger.info(f"Аннулировано {result.rowcount} refresh токенов для user_id: {user_id}")  # type: ignore
+                logger.info(
+                    f"Аннулировано {result.rowcount} refresh токенов для user_id: {user_id}"
+                )  # type: ignore
         except SQLAlchemyError as e:
             logger.exception(
                 f"Ошибка БД при аннулировании refresh токенов для user_id {user_id}"
@@ -422,7 +442,9 @@ class AvatarFilesRepo:
                 query = delete(AvatarFiles).where(AvatarFiles.user_id == user_id)
                 result = await session.execute(query)
                 await session.commit()
-                logger.info(f"Удалено {result.rowcount} аватаров для user_id: {user_id}")  # type: ignore
+                logger.info(
+                    f"Удалено {result.rowcount} аватаров для user_id: {user_id}"
+                )  # type: ignore
         except SQLAlchemyError as e:
             logger.exception(f"Ошибка БД при удалении аватаров для user_id {user_id}")
             raise RepositoryInternalError(

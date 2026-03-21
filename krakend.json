@@ -39,7 +39,7 @@
         {
           "url_pattern": "/users/health_check",
           "host": [
-            "http://notes-users-service:8002"
+            "http://rt-chat-users-service:8002"
           ]
         }
       ]
@@ -52,7 +52,7 @@
         {
           "url_pattern": "/users/register/",
           "host": [
-            "http://notes-users-service:8002"
+            "http://rt-chat-users-service:8002"
           ]
         }
       ]
@@ -65,7 +65,7 @@
         {
           "url_pattern": "/users/login/",
           "host": [
-            "http://notes-users-service:8002"
+            "http://rt-chat-users-service:8002"
           ]
         }
       ]
@@ -79,7 +79,7 @@
         {
           "url_pattern": "/users/tokens/refresh/",
           "host": [
-            "http://notes-users-service:8002"
+            "http://rt-chat-users-service:8002"
           ]
         }
       ]
@@ -93,7 +93,7 @@
         {
           "url_pattern": "/users/logout/",
           "host": [
-            "http://notes-users-service:8002"
+            "http://rt-chat-users-service:8002"
           ]
         }
       ]
@@ -106,7 +106,19 @@
         {
           "url_pattern": "/users/me/",
           "host": [
-            "http://notes-users-service:8002"
+            "http://rt-chat-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/get_all_users/",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/users/get_all_users/",
+          "host": [
+            "http://rt-chat-users-service:8002"
           ]
         }
       ]

@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,43 +27,38 @@ class ChatMessagesRepo:
             return new_message
         except SQLAlchemyError as e:
             logger.exception(
-                f"Ошибка БД при создании сообщения author_id={author_id}, room_id={room_id}: {e}"
+                f"Ошибка БД при создании сообщения sender_id={sender_id}, recipient_id={recipient_id}: {e}"
             )
             raise RepositoryInternalError(
                 "Failed to create message due to a database error."
             ) from e
-        except Exception as e:
-            logger.exception(
-                f"Неожиданная ошибка при создании сообщения author_id={author_id}, room_id={room_id}: {e}"
-            )
-            raise RepositoryInternalError(
-                "Failed to create message due to an unexpected error."
-            ) from e
 
-    async def get_messages_between_users(self, user_id_1: int, user_id_2: int):
+    async def get_messages_between_users(
+        self, user_id_1: int, user_id_2: int
+    ) -> list[ChatMessages]:
         try:
-            messages = await self.session.execute(
+            stmt = (
                 select(ChatMessages)
                 .filter(
                     or_(
-                        ChatMessages.sender_id == user_id_1,
-                        ChatMessages.recipient_id == user_id_2,
+                        and_(
+                            ChatMessages.sender_id == user_id_1,
+                            ChatMessages.recipient_id == user_id_2,
+                        ),
+                        and_(
+                            ChatMessages.sender_id == user_id_2,
+                            ChatMessages.recipient_id == user_id_1,
+                        ),
                     )
                 )
                 .order_by(ChatMessages.id)
             )
-            return messages
+            result = await self.session.execute(stmt)
+            return list(result.scalars().all())
         except SQLAlchemyError as e:
             logger.exception(
-                f"Ошибка БД при создании сообщения author_id={author_id}, room_id={room_id}: {e}"
+                f"Ошибка БД при получении сообщений между user_id={user_id_1} и user_id={user_id_2}: {e}"
             )
             raise RepositoryInternalError(
-                "Failed to create message due to a database error."
-            ) from e
-        except Exception as e:
-            logger.exception(
-                f"Неожиданная ошибка при создании сообщения author_id={author_id}, room_id={room_id}: {e}"
-            )
-            raise RepositoryInternalError(
-                "Failed to create message due to an unexpected error."
+                "Failed to get messages due to a database error."
             ) from e

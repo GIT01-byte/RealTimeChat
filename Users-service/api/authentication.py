@@ -10,12 +10,10 @@ from core.db.repositories import UsersRepo
 from core.schemas.users import (
     RefreshRequest,
     TokenResponse,
-    UserSelfInfo,
 )
 from exceptions.exceptions import (
     EntityNotFoundError,
     InvalidCredentialsError,
-    NotAllowedPermisionError,
     PasswordRequiredError,
     RefreshUserTokensFailedError,
     RegistrationFailedError,
@@ -209,25 +207,12 @@ async def auth_user_check_self_info(
     return current_user
 
 
-@auth_usage.get("/all_users")
-async def get_all_user(
-    current_user: UserSelfInfo = Depends(get_current_active_user),
-):
+@auth_usage.get("/get_all_users/")
+async def get_all_user():
     try:
-        auth_service = AuthService()
-        logger.info(
-            f"Попытка доступа к /all_users пользователем {current_user.user_db.username}"
-        )
-
-        role_rights = await auth_service.get_role_rights(current_user.user_db.role)
-        if role_rights.user_management.view_all_users:
-            users = await UsersRepo.get_all_users()
-            return {"users": users}
-
-        logger.warning("Попытка доступа к /all_users без прав администратора")
-        raise NotAllowedPermisionError
-    except NotAllowedPermisionError:
-        raise
+        logger.info("Попытка получения данных пользователей")
+        users = await UsersRepo.get_all_users_data()
+        return {"users": users}
     except Exception as e:
         logger.error(f"Ошибка при получении списка пользователей: {e}")
         raise RepositoryInternalError(detail="Failed to get users list")

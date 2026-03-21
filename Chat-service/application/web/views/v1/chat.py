@@ -1,22 +1,39 @@
 import asyncio
 from typing import List
 
-from dishka.integrations.fastapi import FromDishka
-from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.configs.settings import settings
-from application.core.chats.schemas.files import (
+from application.core.chats.schemas.messages import (
     ChatMessageCreate,
     ChatMessageRead,
 )
-from application.integrations.auth.auth import get_current_user
+from application.core.chats.schemas.send_message_uc import SendMessageInputDTO
+from application.core.chats.use_cases.send_message import SendMessageUseCase
+from application.exceptions.base import BaseAPIException
+from application.exceptions.exceptions import (
+    GetMessagesBetweenUsersFailedError,
+    SendMessagesFailedError,
+)
+from application.integrations.auth.auth import get_current_user, get_users
 from application.integrations.auth.schemas import UserData
 from application.repositories.chat_messages_repo import ChatMessagesRepo
+from application.utils.logging import logger
 
 router = APIRouter(prefix=settings.api.v1.service, tags=["Real Time Chat"])
 
 active_connections: dict[int, WebSocket] = {}
+
+
+# Функция для отправки сообщения пользователю, если он подключен
+async def notify_user(user_id: int, message: dict):
+    """Отправить сообщение пользователю, если он подключен."""
+    if user_id in active_connections:
+        websocket = active_connections[user_id]
+        # Отправляем сообщение в формате JSON
+        await websocket.send_json(message)
 
 
 # ----- Основные API ендпоинты -----
@@ -25,57 +42,77 @@ async def health_check():
     return {"success": "Сервис Real-Time чата запущен"}
 
 
-# Страница чата
-@router.get("/", summary="Chat Page")
-async def get_chat_page(
-    request: Request, user_data: UserData = Depends(get_current_user)
-):
-    users_all = ...  # TODO Users Repo get all users
+@router.get("/")
+@inject
+async def get_chat(user_data: UserData = Depends(get_current_user)):
+    users_all = await get_users()
     return {
-        "page": "Чат",
         "user_data": user_data,
-        "users_all": users_all,
-    }  # TODO return template_response (Jinja)
-
-
-@router.post("/messages", response_model=ChatMessageCreate)
-async def send_message(
-    session: FromDishka[AsyncSession],
-    message: ChatMessageCreate,
-    current_user: UserData = Depends(get_current_user),
-):
-    messages_repo = ChatMessagesRepo(session=session)
-    # Add new message to the database
-    await messages_repo.create(
-        sender_id=current_user.user_id,
-        recipient_id=message.recipient_id,
-        text=message.text,
-    )
-
-    return {
-        "recipient_id": message.recipient_id,
-        "text": message.text,
-        "status": "ok",
-        "msg": "Message saved!",
+        "users_all": users_all["users"],
     }
 
 
+@router.post("/messages")
+@inject
+async def send_message(
+    send_message_uc: FromDishka[SendMessageUseCase],
+    message: ChatMessageCreate,
+    current_user: UserData = Depends(get_current_user),
+):
+    try:
+        send_message_data = SendMessageInputDTO(
+            sender_id=current_user.user_id,
+            recipient_id=message.recipient_id,
+            text=message.text,
+        )
+        send_message_output = await send_message_uc.execute(data=send_message_data)
+
+        # Формируем данные сообщения для отправки
+        message_data = {
+            "sender_id": send_message_output.sender_id,
+            "recipient_id": send_message_output.recipient_id,
+            "text": send_message_output.text,
+        }
+
+        # Уведомляем получателя и отправителя через WebSocket
+        await notify_user(send_message_output.recipient_id, message_data)
+        await notify_user(send_message_output.sender_id, message_data)
+
+        return {
+            "recipient_id": send_message_output.recipient_id,
+            "text": send_message_output.text,
+            "status": "ok",
+            "msg": "Message saved!",
+        }
+    except BaseAPIException:
+        raise
+    except Exception as e:
+        logger.exception(f"Ошибка при отправке сообщения: {e}")
+        raise SendMessagesFailedError from e
+
+
 @router.get("/messages/{user_id}", response_model=List[ChatMessageRead])
+@inject
 async def get_messages(
     session: FromDishka[AsyncSession],
     user_id: int,
     current_user: UserData = Depends(get_current_user),
 ):
-    messages_repo = ChatMessagesRepo(session=session)
-    return (
-        await messages_repo.get_messages_between_users(
+    try:
+        messages_repo = ChatMessagesRepo(session=session)
+        messages = await messages_repo.get_messages_between_users(
             user_id_1=user_id, user_id_2=current_user.user_id
         )
-        or []
-    )
+        return messages
+    except BaseAPIException:
+        raise
+    except Exception as e:
+        logger.exception(f"Ошибка при получении сообщений user_id={user_id}: {e}")
+        raise GetMessagesBetweenUsersFailedError from e
 
 
 @router.websocket("/ws/{user_id}")
+@inject
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     """
     Вебсокет для активного подкючения к серверу
@@ -87,11 +124,13 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     """
     await websocket.accept()
     active_connections[user_id] = websocket
+    logger.info(f"Пользователь {user_id} подключился")
     try:
         while True:
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         active_connections.pop(user_id, None)
+        logger.info(f"Пользователь {user_id} отключился")
 
 
 # ----- Вспомогательные API ендпоинты -----

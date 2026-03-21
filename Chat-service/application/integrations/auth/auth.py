@@ -1,4 +1,8 @@
+from typing import Any
+
 import httpx
+from application.exceptions.exceptions import GetUsersListFailedError
+from application.utils.logging import logger
 from fastapi import HTTPException, Request, status
 
 from .schemas import UserData
@@ -8,32 +12,26 @@ async def get_current_user(request: Request):
     async with httpx.AsyncClient() as client:
         try:
             auth_token = request.headers.get("authorization")
-            print(f"INFO:    get_current_user получил - {auth_token}")
 
-            if auth_token:
-                auth_header = {"Authorization": f"{auth_token}"}
-
-                login_response = await client.get(
-                    "http://krakend:8080/user/self_info/",
-                    headers=auth_header,
-                    follow_redirects=True,
+            if not auth_token:
+                raise HTTPException(
+                    status_code=500, detail="Authorization token missing."
                 )
-            else:
-                print("EXC:   get_current_user    Get cookie fail")
-                raise HTTPException(status_code=500, detail="Get cookie fail")
+
+            login_response = await client.get(
+                "http://rt-chat-krakend:8080/user/self_info/",
+                headers={"Authorization": auth_token},
+                follow_redirects=True,
+            )
 
             if login_response.status_code != 200:
-                print(
-                    f"EXC:   get_current_user    Authorization failed: {login_response.text}"
-                )
+                logger.warning(f"Авторизация не удалась: {login_response.status_code}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=f"Authorization failed: {login_response.text}",
                 )
 
             response_data: dict = login_response.json()
-            print(f"INFO:    get_current_user обработал - {response_data}")
-
             return UserData(
                 user_id=response_data["user_db"]["id"],
                 username=response_data["user_db"]["username"],
@@ -45,5 +43,26 @@ async def get_current_user(request: Request):
             )
 
         except httpx.RequestError as exc:
-            print(f"EXC:   get_current_user    Gateway unavailable: {exc}")
+            logger.exception(f"Шлюз недоступен: {exc}")
+            raise HTTPException(status_code=503, detail=f"Gateway unavailable: {exc}")
+
+
+async def get_users() -> dict[str, Any]:
+    async with httpx.AsyncClient() as client:
+        try:
+            get_response = await client.get(
+                "http://rt-chat-krakend:8080/user/get_all_users/",
+                follow_redirects=True,
+            )
+
+            if get_response.status_code != 200:
+                logger.warning(
+                    f"Ошибка получения списка пользователей: {get_response.text}"
+                )
+                raise GetUsersListFailedError
+
+            return get_response.json()
+
+        except httpx.RequestError as exc:
+            logger.exception(f"Шлюз недоступен: {exc}")
             raise HTTPException(status_code=503, detail=f"Gateway unavailable: {exc}")
