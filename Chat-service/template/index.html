@@ -2,148 +2,528 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>RT Chat — Test</title>
+  <title>RT Chat</title>
   <style>
-    body { font-family: monospace; max-width: 800px; margin: 20px auto; padding: 0 16px; }
-    section { border: 1px solid #ccc; padding: 12px; margin-bottom: 16px; border-radius: 6px; }
-    h3 { margin: 0 0 8px; }
-    input, textarea { width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 4px; }
-    button { margin-right: 6px; padding: 4px 10px; cursor: pointer; }
-    #messages { height: 200px; overflow-y: auto; border: 1px solid #aaa; padding: 8px; background: #f9f9f9; }
-    .msg { margin: 4px 0; }
-    .msg.incoming { color: #1a6e1a; }
-    .msg.outgoing { color: #1a1a8e; }
-    pre { background: #eee; padding: 8px; overflow-x: auto; font-size: 12px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ───── AUTH ───── */
+    #auth-screen {
+      width: 360px;
+    }
+
+    .auth-logo {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: #7c6af7;
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 2px solid #2a2d3a;
+      margin-bottom: 24px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      color: #888;
+      font-size: 14px;
+      transition: color .2s;
+    }
+
+    .auth-tab.active {
+      color: #7c6af7;
+      border-bottom: 2px solid #7c6af7;
+      margin-bottom: -2px;
+    }
+
+    .auth-form { display: none; flex-direction: column; gap: 12px; }
+    .auth-form.active { display: flex; }
+
+    .auth-form input {
+      background: #1c1f2e;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .auth-form input:focus { border-color: #7c6af7; }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: opacity .2s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: #7c6af7; color: #fff; }
+    .btn-ghost { background: #2a2d3a; color: #aaa; }
+    .btn-danger { background: #c0392b; color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    .auth-error {
+      color: #e74c3c;
+      font-size: 12px;
+      text-align: center;
+      min-height: 16px;
+    }
+
+    /* ───── CHAT ───── */
+    #chat-screen {
+      display: none;
+      width: 900px;
+      height: 580px;
+      background: #1c1f2e;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,.5);
+      flex-direction: row;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: #161824;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #2a2d3a;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #7c6af7;
+      border-bottom: 1px solid #2a2d3a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ws-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #555;
+      display: inline-block;
+    }
+    .ws-dot.connected { background: #2ecc71; }
+
+    .user-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .user-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      border-radius: 8px;
+      margin: 2px 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background .15s;
+    }
+    .user-item:hover { background: #2a2d3a; }
+    .user-item.active { background: #2e2b4a; color: #7c6af7; }
+
+    .avatar-circle {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #7c6af7;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #2a2d3a;
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .me-name { color: #aaa; font-weight: 600; }
+
+    /* Chat area */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #2a2d3a;
+      font-size: 14px;
+      font-weight: 600;
+      color: #ccc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-header .no-chat { color: #555; font-weight: 400; font-size: 13px; }
+
+    .messages-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .message {
+      max-width: 65%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .message.incoming {
+      background: #2a2d3a;
+      color: #ddd;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message.outgoing {
+      background: #7c6af7;
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message .meta {
+      font-size: 10px;
+      opacity: .6;
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .message.system-msg {
+      align-self: center;
+      background: none;
+      color: #555;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+
+    .chat-input-area {
+      padding: 12px 16px;
+      border-top: 1px solid #2a2d3a;
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0e0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .chat-input-area input:focus { border-color: #7c6af7; }
+    .chat-input-area input:disabled { opacity: .4; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <h2>RT Chat — Test UI</h2>
 
-  <!-- Токен -->
-  <section>
-    <h3>1. JWT токен</h3>
-    <input id="token" placeholder="Вставь Bearer токен (без слова Bearer)" />
-    <small>Получи токен через Users-service: POST /api/v1/auth/login</small>
-  </section>
+  <!-- AUTH -->
+  <div id="auth-screen">
+    <div class="auth-logo">💬 RT Chat</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">Вход</div>
+      <div class="auth-tab" onclick="switchTab('register')">Регистрация</div>
+    </div>
 
-  <!-- Health check -->
-  <section>
-    <h3>2. Health Check</h3>
-    <button onclick="healthCheck()">GET /health_check/</button>
-    <pre id="health-result">—</pre>
-  </section>
+    <form class="auth-form active" id="login-form" onsubmit="login(event)">
+      <input id="login-username" placeholder="Имя пользователя" required />
+      <input id="login-password" type="password" placeholder="Пароль" required />
+      <button class="btn btn-primary" type="submit">Войти</button>
+      <div class="auth-error" id="login-error"></div>
+    </form>
 
-  <!-- Список пользователей + текущий юзер -->
-  <section>
-    <h3>3. GET / — текущий пользователь + все юзеры</h3>
-    <button onclick="getChat()">GET /</button>
-    <pre id="chat-result">—</pre>
-  </section>
+    <form class="auth-form" id="register-form" onsubmit="register(event)">
+      <input id="reg-username" placeholder="Имя пользователя" required />
+      <input id="reg-email" placeholder="Email (необязательно)" />
+      <input id="reg-password" type="password" placeholder="Пароль (мин. 8 символов)" required />
+      <button class="btn btn-primary" type="submit">Зарегистрироваться</button>
+      <div class="auth-error" id="reg-error"></div>
+    </form>
+  </div>
 
-  <!-- История сообщений -->
-  <section>
-    <h3>4. История сообщений с пользователем</h3>
-    <input id="history-user-id" placeholder="user_id собеседника" type="number" />
-    <button onclick="getMessages()">GET /messages/{user_id}</button>
-    <pre id="history-result">—</pre>
-  </section>
+  <!-- CHAT -->
+  <div id="chat-screen">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        Пользователи
+        <span class="ws-dot" id="ws-dot" title="WebSocket"></span>
+      </div>
+      <div class="user-list" id="user-list"></div>
+      <div class="sidebar-footer">
+        <span class="me-name" id="me-name">—</span>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+      </div>
+    </div>
 
-  <!-- Отправка сообщения через REST -->
-  <section>
-    <h3>5. Отправить сообщение (REST POST)</h3>
-    <input id="send-recipient-id" placeholder="recipient_id" type="number" />
-    <input id="send-text" placeholder="Текст сообщения" />
-    <button onclick="sendMessage()">POST /messages</button>
-    <pre id="send-result">—</pre>
-  </section>
-
-  <!-- WebSocket -->
-  <section>
-    <h3>6. WebSocket /ws/{user_id}</h3>
-    <input id="ws-user-id" placeholder="Твой user_id" type="number" />
-    <button onclick="connectWS()">Подключиться</button>
-    <button onclick="disconnectWS()">Отключиться</button>
-    <span id="ws-status" style="color:gray">● отключён</span>
-    <div id="messages"></div>
-  </section>
+    <div class="chat-area">
+      <div class="chat-header">
+        <div class="avatar-circle" id="chat-avatar" style="display:none"></div>
+        <span id="chat-title"><span class="no-chat">Выберите собеседника</span></span>
+      </div>
+      <div class="messages-box" id="messages-box"></div>
+      <div class="chat-input-area">
+        <input id="msg-input" placeholder="Сообщение..." disabled
+          onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button class="btn btn-primary" onclick="sendMessage()">→</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const API_URL = 'http://localhost:8001/real_time_chat'
-    const WS_URL = 'ws://localhost:8001/real_time_chat/ws'
+    const GW = 'http://localhost:8080'
+    let currentUser = null
+    let activeRecipient = null
     let ws = null
 
-    function getToken() {
-      return document.getElementById('token').value.trim()
+    // ───── COOKIES ─────
+    function getCookie(name) {
+      return document.cookie.split('; ').reduce((acc, c) => {
+        const [k, v] = c.split('=')
+        return k === name ? decodeURIComponent(v) : acc
+      }, null)
     }
 
-    function authHeaders() {
-      return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
+    function setCookie(name, value, days = 1) {
+      const exp = new Date(Date.now() + days * 864e5).toUTCString()
+      document.cookie = `${name}=${encodeURIComponent(value)};expires=${exp};path=/;SameSite=Lax`
+    }
+
+    function deleteCookie(name) {
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+    }
+
+    function getToken() { return getCookie('access_token') }
+
+    function authHeaders(isForm = false) {
+      const h = { 'Authorization': `Bearer ${getToken()}` }
+      if (!isForm) h['Content-Type'] = 'application/json'
+      return h
+    }
+
+    // ───── TABS ─────
+    function switchTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach((t, i) =>
+        t.classList.toggle('active', (i === 0) === (tab === 'login'))
+      )
+      document.getElementById('login-form').classList.toggle('active', tab === 'login')
+      document.getElementById('register-form').classList.toggle('active', tab === 'register')
+    }
+
+    // ───── AUTH ─────
+    async function login(e) {
+      e.preventDefault()
+      const errEl = document.getElementById('login-error')
+      errEl.textContent = ''
+      const body = new FormData()
+      body.append('username', document.getElementById('login-username').value)
+      body.append('password', document.getElementById('login-password').value)
+      try {
+        const res = await fetch(`${GW}/user/login/`, { method: 'POST', body })
+        const data = await res.json()
+        if (!res.ok) { errEl.textContent = data.detail || 'Ошибка входа'; return }
+        setCookie('access_token', data.access_token)
+        setCookie('refresh_token', data.refresh_token)
+        await enterChat()
+      } catch { errEl.textContent = 'Сервер недоступен' }
+    }
+
+    async function register(e) {
+      e.preventDefault()
+      const errEl = document.getElementById('reg-error')
+      errEl.textContent = ''
+      const body = new FormData()
+      body.append('username', document.getElementById('reg-username').value)
+      body.append('password', document.getElementById('reg-password').value)
+      const email = document.getElementById('reg-email').value
+      if (email) body.append('email', email)
+      try {
+        const res = await fetch(`${GW}/user/register/`, { method: 'POST', body })
+        const data = await res.json()
+        if (!res.ok) { errEl.textContent = data.detail || 'Ошибка регистрации'; return }
+        errEl.style.color = '#2ecc71'
+        errEl.textContent = 'Успешно! Войдите в аккаунт.'
+        switchTab('login')
+      } catch { errEl.textContent = 'Сервер недоступен' }
+    }
+
+    async function logout() {
+      try {
+        await fetch(`${GW}/user/logout/`, { method: 'POST', headers: authHeaders() })
+      } finally {
+        deleteCookie('access_token')
+        deleteCookie('refresh_token')
+        ws?.close()
+        currentUser = null
+        activeRecipient = null
+        document.getElementById('chat-screen').style.display = 'none'
+        document.getElementById('auth-screen').style.display = 'block'
       }
     }
 
-    async function healthCheck() {
-      const res = await fetch(`${API_URL}/health_check/`)
-      document.getElementById('health-result').textContent = JSON.stringify(await res.json(), null, 2)
+    // ───── ENTER CHAT ─────
+    async function enterChat() {
+      try {
+        const res = await fetch(`${GW}/user/self_info/`, { headers: authHeaders() })
+        if (!res.ok) return
+        currentUser = await res.json()
+      } catch { return }
+
+      document.getElementById('auth-screen').style.display = 'none'
+      const chatEl = document.getElementById('chat-screen')
+      chatEl.style.display = 'flex'
+      document.getElementById('me-name').textContent = currentUser.username || `ID:${currentUser.user_id}`
+
+      await loadUsers()
+      connectWS()
     }
 
-    async function getChat() {
-      const res = await fetch(`${API_URL}/`, { headers: authHeaders() })
-      document.getElementById('chat-result').textContent = JSON.stringify(await res.json(), null, 2)
+    // ───── USERS ─────
+    async function loadUsers() {
+      try {
+        const res = await fetch(`${GW}/user/get_all_users/`)
+        const data = await res.json()
+        const users = data.users || []
+        const list = document.getElementById('user-list')
+        list.innerHTML = ''
+        users.forEach(u => {
+          if (u.id === currentUser?.user_id) return
+          const el = document.createElement('div')
+          el.className = 'user-item'
+          el.dataset.id = u.id
+          el.dataset.name = u.username
+          el.innerHTML = `
+            <div class="avatar-circle">${u.username[0].toUpperCase()}</div>
+            <span>${u.username}</span>`
+          el.onclick = () => openChat(u)
+          list.appendChild(el)
+        })
+      } catch {}
     }
 
-    async function getMessages() {
-      const userId = document.getElementById('history-user-id').value
-      const res = await fetch(`${API_URL}/messages/${userId}`, { headers: authHeaders() })
-      document.getElementById('history-result').textContent = JSON.stringify(await res.json(), null, 2)
+    // ───── OPEN CHAT ─────
+    async function openChat(user) {
+      activeRecipient = user
+      document.querySelectorAll('.user-item').forEach(el =>
+        el.classList.toggle('active', el.dataset.id == user.id)
+      )
+      const avatar = document.getElementById('chat-avatar')
+      avatar.style.display = 'flex'
+      avatar.textContent = user.username[0].toUpperCase()
+      document.getElementById('chat-title').textContent = user.username
+      document.getElementById('msg-input').disabled = false
+      document.getElementById('msg-input').focus()
+      await loadHistory(user.id)
     }
 
+    async function loadHistory(userId) {
+      const box = document.getElementById('messages-box')
+      box.innerHTML = ''
+      try {
+        const res = await fetch(`${GW}/chat/messages/${userId}`, { headers: authHeaders() })
+        if (!res.ok) return
+        const messages = await res.json()
+        ;(Array.isArray(messages) ? messages : []).forEach(m => appendMessage(m))
+      } catch {}
+    }
+
+    // ───── SEND ─────
     async function sendMessage() {
-      const recipientId = parseInt(document.getElementById('send-recipient-id').value)
-      const text = document.getElementById('send-text').value
-      const res = await fetch(`${API_URL}/messages`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ recipient_id: recipientId, text })
-      })
-      document.getElementById('send-result').textContent = JSON.stringify(await res.json(), null, 2)
+      const input = document.getElementById('msg-input')
+      const text = input.value.trim()
+      if (!text || !activeRecipient) return
+      input.value = ''
+      try {
+        await fetch(`${GW}/chat/messages`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ recipient_id: activeRecipient.id, text })
+        })
+      } catch {}
     }
 
+    // ───── WEBSOCKET ─────
     function connectWS() {
-      const userId = document.getElementById('ws-user-id').value
-      if (!userId) return alert('Введи user_id')
-      ws = new WebSocket(`${WS_URL}/${userId}`)
-
-      ws.onopen = () => {
-        document.getElementById('ws-status').textContent = '● подключён'
-        document.getElementById('ws-status').style.color = 'green'
-        addMessage('system', `WebSocket подключён (user_id=${userId})`)
+      if (!currentUser) return
+      ws = new WebSocket(`ws://localhost:8001/api/v1/real_time_chat/ws/${currentUser.user_id}`)
+      ws.onopen = () => document.getElementById('ws-dot').classList.add('connected')
+      ws.onclose = () => {
+        document.getElementById('ws-dot').classList.remove('connected')
+        setTimeout(connectWS, 3000)
       }
       ws.onmessage = (e) => {
         const data = JSON.parse(e.data)
-        addMessage('incoming', `От ${data.sender_id}: ${data.text}`)
+        appendMessage(data)
+        // Автопереход в чат если пишет не текущий собеседник
+        if (data.sender_id !== currentUser.user_id &&
+            (!activeRecipient || activeRecipient.id !== data.sender_id)) {
+          const senderEl = document.querySelector(`.user-item[data-id="${data.sender_id}"]`)
+          if (senderEl) senderEl.click()
+        }
       }
-      ws.onclose = () => {
-        document.getElementById('ws-status').textContent = '● отключён'
-        document.getElementById('ws-status').style.color = 'gray'
-        addMessage('system', 'WebSocket отключён')
-      }
-      ws.onerror = (e) => addMessage('system', `Ошибка WS: ${e}`)
     }
 
-    function disconnectWS() {
-      ws?.close()
-    }
-
-    function addMessage(type, text) {
+    // ───── RENDER MESSAGE ─────
+    function appendMessage(m) {
+      const box = document.getElementById('messages-box')
+      const isOwn = m.sender_id === currentUser?.user_id
+      // Показываем только сообщения текущего диалога
+      if (activeRecipient &&
+          m.sender_id !== activeRecipient.id &&
+          m.recipient_id !== activeRecipient.id) return
       const div = document.createElement('div')
-      div.className = `msg ${type}`
-      div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`
-      const box = document.getElementById('messages')
+      div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`
+      div.innerHTML = `${m.text}<div class="meta">${new Date().toLocaleTimeString()}</div>`
       box.appendChild(div)
       box.scrollTop = box.scrollHeight
     }
+
+    // ───── INIT ─────
+    if (getToken()) enterChat()
   </script>
 </body>
 </html>

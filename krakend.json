@@ -33,6 +33,18 @@
   },
   "endpoints": [
     {
+      "endpoint": "/chat_service/health_check/",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/real_time_chat/health_check/",
+          "host": [
+            "http://rt-chat-chat-service:8001"
+          ]
+        }
+      ]
+    },
+    {
       "endpoint": "/users_service/health_check/",
       "method": "GET",
       "backend": [
@@ -40,6 +52,47 @@
           "url_pattern": "/users/health_check",
           "host": [
             "http://rt-chat-users-service:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/chat/",
+      "method": "GET",
+      "input_headers": ["Authorization"],
+      "backend": [
+        {
+          "url_pattern": "/real_time_chat/",
+          "host": [
+            "http://rt-chat-chat-service:8001"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/chat/messages",
+      "method": "POST",
+      "input_headers": ["Authorization"],
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/real_time_chat/messages",
+          "host": [
+            "http://rt-chat-chat-service:8001"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/chat/messages/{user_id}",
+      "method": "GET",
+      "input_headers": ["Authorization"],
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/real_time_chat/messages/{user_id}",
+          "host": [
+            "http://rt-chat-chat-service:8001"
           ]
         }
       ]
