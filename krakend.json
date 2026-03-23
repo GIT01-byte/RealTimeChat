@@ -37,7 +37,7 @@
       "method": "GET",
       "backend": [
         {
-          "url_pattern": "/real_time_chat/health_check/",
+          "url_pattern": "/api/v1/real_time_chat/health_check/",
           "host": [
             "http://rt-chat-chat-service:8001"
           ]
@@ -62,7 +62,7 @@
       "input_headers": ["Authorization"],
       "backend": [
         {
-          "url_pattern": "/real_time_chat/",
+          "url_pattern": "/api/v1/real_time_chat/",
           "host": [
             "http://rt-chat-chat-service:8001"
           ]
@@ -72,11 +72,11 @@
     {
       "endpoint": "/chat/messages",
       "method": "POST",
-      "input_headers": ["Authorization"],
+      "input_headers": ["Authorization", "Content-Type"],
       "output_encoding": "json",
       "backend": [
         {
-          "url_pattern": "/real_time_chat/messages",
+          "url_pattern": "/api/v1/real_time_chat/messages",
           "host": [
             "http://rt-chat-chat-service:8001"
           ]
@@ -90,7 +90,7 @@
       "output_encoding": "json",
       "backend": [
         {
-          "url_pattern": "/real_time_chat/messages/{user_id}",
+          "url_pattern": "/api/v1/real_time_chat/messages/{user_id}",
           "host": [
             "http://rt-chat-chat-service:8001"
           ]

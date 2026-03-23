@@ -146,6 +146,15 @@
     .user-item:hover { background: #2a2d3a; }
     .user-item.active { background: #2e2b4a; color: #7c6af7; }
 
+    .online-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #555;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .online-dot.online { background: #2ecc71; }
+
     .avatar-circle {
       width: 32px; height: 32px;
       border-radius: 50%;
@@ -320,24 +329,19 @@
     let activeRecipient = null
     let ws = null
 
-    // ───── COOKIES ─────
-    function getCookie(name) {
-      return document.cookie.split('; ').reduce((acc, c) => {
-        const [k, v] = c.split('=')
-        return k === name ? decodeURIComponent(v) : acc
-      }, null)
+    // ───── STORAGE ─────
+    function getToken() { return localStorage.getItem('access_token') }
+    function getRefreshToken() { return localStorage.getItem('refresh_token') }
+
+    function setTokens(access, refresh) {
+      localStorage.setItem('access_token', access)
+      localStorage.setItem('refresh_token', refresh)
     }
 
-    function setCookie(name, value, days = 1) {
-      const exp = new Date(Date.now() + days * 864e5).toUTCString()
-      document.cookie = `${name}=${encodeURIComponent(value)};expires=${exp};path=/;SameSite=Lax`
+    function clearTokens() {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
     }
-
-    function deleteCookie(name) {
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
-    }
-
-    function getToken() { return getCookie('access_token') }
 
     function authHeaders(isForm = false) {
       const h = { 'Authorization': `Bearer ${getToken()}` }
@@ -366,10 +370,29 @@
         const res = await fetch(`${GW}/user/login/`, { method: 'POST', body })
         const data = await res.json()
         if (!res.ok) { errEl.textContent = data.detail || 'Ошибка входа'; return }
-        setCookie('access_token', data.access_token)
-        setCookie('refresh_token', data.refresh_token)
-        await enterChat()
+        setTokens(data.access_token, data.refresh_token)
+        // Сначала получаем user_id через self_info, потом входим в чат
+        const ok = await fetchSelfInfo()
+        if (ok) await enterChat()
+        else errEl.textContent = 'Не удалось получить данные пользователя'
       } catch { errEl.textContent = 'Сервер недоступен' }
+    }
+
+    // GET /user/self_info/ → сохраняем currentUser с user_id
+    async function fetchSelfInfo() {
+      try {
+        const res = await fetch(`${GW}/user/self_info/`, { headers: authHeaders() })
+        if (!res.ok) return false
+        const data = await res.json()  // {jwt_payload: {sub, ...}, user_db: {id, username, ...}}
+        currentUser = {
+          user_id: data.user_db.id,
+          username: data.user_db.username,
+          email: data.user_db.email,
+          role: data.user_db.role,
+          is_active: data.user_db.is_active,
+        }
+        return true
+      } catch { return false }
     }
 
     async function register(e) {
@@ -395,9 +418,9 @@
       try {
         await fetch(`${GW}/user/logout/`, { method: 'POST', headers: authHeaders() })
       } finally {
-        deleteCookie('access_token')
-        deleteCookie('refresh_token')
+        clearTokens()
         ws?.close()
+        stopPolling()
         currentUser = null
         activeRecipient = null
         document.getElementById('chat-screen').style.display = 'none'
@@ -408,41 +431,64 @@
     // ───── ENTER CHAT ─────
     async function enterChat() {
       try {
-        const res = await fetch(`${GW}/user/self_info/`, { headers: authHeaders() })
-        if (!res.ok) return
-        currentUser = await res.json()
+        // Если currentUser ещё не загружен (перезагрузка страницы с кукой) — загружаем через self_info
+        if (!currentUser) {
+          const ok = await fetchSelfInfo()
+          if (!ok) { clearTokens(); return }
+        }
+
+        const res = await fetch(`${GW}/chat/`, { headers: authHeaders() })
+        if (!res.ok) { deleteCookie('access_token'); return }
+        const data = await res.json()
+
+        document.getElementById('auth-screen').style.display = 'none'
+        document.getElementById('chat-screen').style.display = 'flex'
+        document.getElementById('me-name').textContent = currentUser.username
+
+        renderUsers(data.users_all || [], data.users_online || {})
+        connectWS()
+        startPolling()
       } catch { return }
+    }
 
-      document.getElementById('auth-screen').style.display = 'none'
-      const chatEl = document.getElementById('chat-screen')
-      chatEl.style.display = 'flex'
-      document.getElementById('me-name').textContent = currentUser.username || `ID:${currentUser.user_id}`
+    // ───── POLLING ─────
+    let pollingTimer = null
 
-      await loadUsers()
-      connectWS()
+    function startPolling() {
+      stopPolling()
+      pollingTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`${GW}/chat/`, { headers: authHeaders() })
+          if (!res.ok) return
+          const data = await res.json()
+          renderUsers(data.users_all || [], data.users_online || {})
+        } catch {}
+      }, 5000)
+    }
+
+    function stopPolling() {
+      if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null }
     }
 
     // ───── USERS ─────
-    async function loadUsers() {
-      try {
-        const res = await fetch(`${GW}/user/get_all_users/`)
-        const data = await res.json()
-        const users = data.users || []
-        const list = document.getElementById('user-list')
-        list.innerHTML = ''
-        users.forEach(u => {
-          if (u.id === currentUser?.user_id) return
-          const el = document.createElement('div')
-          el.className = 'user-item'
-          el.dataset.id = u.id
-          el.dataset.name = u.username
-          el.innerHTML = `
-            <div class="avatar-circle">${u.username[0].toUpperCase()}</div>
-            <span>${u.username}</span>`
-          el.onclick = () => openChat(u)
-          list.appendChild(el)
-        })
-      } catch {}
+    function renderUsers(users, usersOnline) {
+      const list = document.getElementById('user-list')
+      const prevActive = activeRecipient?.id
+      list.innerHTML = ''
+      users.forEach(u => {
+        if (u.id === currentUser?.user_id) return
+        const isOnline = u.id in usersOnline
+        const el = document.createElement('div')
+        el.className = 'user-item' + (u.id === prevActive ? ' active' : '')
+        el.dataset.id = u.id
+        el.dataset.name = u.username
+        el.innerHTML = `
+          <div class="avatar-circle">${u.username[0].toUpperCase()}</div>
+          <span>${u.username}</span>
+          <span class="online-dot ${isOnline ? 'online' : ''}" title="${isOnline ? 'онлайн' : 'офлайн'}"></span>`
+        el.onclick = () => openChat(u)
+        list.appendChild(el)
+      })
     }
 
     // ───── OPEN CHAT ─────
@@ -508,16 +554,21 @@
     }
 
     // ───── RENDER MESSAGE ─────
+    // m shape from REST: {id, uuid, sender_id, recipient_id, text, created_at}
+    // m shape from WS:   {sender_id, recipient_id, text}
     function appendMessage(m) {
       const box = document.getElementById('messages-box')
       const isOwn = m.sender_id === currentUser?.user_id
-      // Показываем только сообщения текущего диалога
       if (activeRecipient &&
           m.sender_id !== activeRecipient.id &&
-          m.recipient_id !== activeRecipient.id) return
+          m.recipient_id !== activeRecipient.id &&
+          m.sender_id !== currentUser?.user_id) return
+      const time = m.created_at
+        ? new Date(m.created_at).toLocaleTimeString()
+        : new Date().toLocaleTimeString()
       const div = document.createElement('div')
       div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`
-      div.innerHTML = `${m.text}<div class="meta">${new Date().toLocaleTimeString()}</div>`
+      div.innerHTML = `${m.text}<div class="meta">${time}</div>`
       box.appendChild(div)
       box.scrollTop = box.scrollHeight
     }

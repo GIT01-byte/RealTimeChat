@@ -33,7 +33,7 @@ async def get_current_user(request: Request):
 
             response_data: dict = login_response.json()
             return UserData(
-                user_id=response_data["user_db"]["id"],
+                id=response_data["user_db"]["id"],
                 username=response_data["user_db"]["username"],
                 email=response_data["user_db"]["email"],
                 is_active=response_data["user_db"]["is_active"],

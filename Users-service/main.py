@@ -4,22 +4,17 @@ import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
-from contextlib import asynccontextmanager
 import tracemalloc
+from contextlib import asynccontextmanager
 
+from api import api_router
+from core.settings import settings
+from errors_handlers import register_errors_handlers
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
-
-from core.settings import settings
-from api import api_router
-
 from prometheus_fastapi_instrumentator import Instrumentator
-
-from errors_handlers import register_errors_handlers
-
 from utils.logging import logger
-
 
 # Включаем отслеживание памяти, для дебага ошибок с ассинхронными функциями
 tracemalloc.start()
@@ -53,7 +48,7 @@ def create_app() -> FastAPI:
     # Подключаем middleware для просмотра содержимого http запроса
     @main_app.middleware("http")
     async def log_requests(request: Request, call_next):
-        logger.info(f"\n----------- New request -----------")
+        logger.info("\n----------- New request -----------")
         logger.info(f"Request: {request.method} {request.url}")
         logger.info(f"Headers: {request.headers}")
         try:
@@ -66,7 +61,7 @@ def create_app() -> FastAPI:
 
     # Подключаем api-роутеры
     main_app.include_router(api_router)
-    
+
     # Подключаем обработчики исключений
     register_errors_handlers(main_app)
 
