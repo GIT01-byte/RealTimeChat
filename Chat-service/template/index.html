@@ -367,7 +367,7 @@
   </div>
 
   <script>
-    const GW = 'http://localhost:8080'
+    const GW = 'http://176.12.67.28:8080'
     let currentUser = null
     let activeRecipient = null
     let ws = null
@@ -633,7 +633,7 @@
     // ───── WEBSOCKET ─────
     function connectWS() {
       if (!currentUser) return
-      ws = new WebSocket(`ws://localhost:8001/api/v1/real_time_chat/ws/${currentUser.user_id}`)
+      ws = new WebSocket(`ws://176.12.67.28:8001/api/v1/real_time_chat/ws/${currentUser.user_id}`)
       ws.onopen = () => document.getElementById('ws-dot').classList.add('connected')
       ws.onclose = () => {
         document.getElementById('ws-dot').classList.remove('connected')
