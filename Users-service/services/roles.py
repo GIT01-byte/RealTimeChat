@@ -266,6 +266,7 @@ class GuestUser(UserPermissions):
         ),
     )
 
+
 ALL_ROLES = {
     "user": RegularUser(),
     "admin": AdminUser(),

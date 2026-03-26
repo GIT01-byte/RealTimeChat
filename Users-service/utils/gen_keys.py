@@ -23,7 +23,7 @@ public_key = private_key.public_key()
 pem_private = private_key.private_bytes(
     encoding=serialization.Encoding.PEM,
     format=serialization.PrivateFormat.PKCS8,
-    encryption_algorithm=serialization.NoEncryption()
+    encryption_algorithm=serialization.NoEncryption(),
 )
 with open(os.path.join(KEY_DIR, "private_key.pem"), "wb") as f:
     f.write(pem_private)
@@ -31,10 +31,11 @@ with open(os.path.join(KEY_DIR, "private_key.pem"), "wb") as f:
 # 3. Сериализация открытого ключа в PEM-формат и запись в файл
 pem_public = public_key.public_bytes(
     encoding=serialization.Encoding.PEM,
-    format=serialization.PublicFormat.SubjectPublicKeyInfo
+    format=serialization.PublicFormat.SubjectPublicKeyInfo,
 )
 with open(os.path.join(KEY_DIR, "public_key.pem"), "wb") as f:
     f.write(pem_public)
 
 print(
-    f"Ключи успешно записаны в файлы {KEY_DIR}/private_key.pem и {KEY_DIR}/public_key.pem")
+    f"Ключи успешно записаны в файлы {KEY_DIR}/private_key.pem и {KEY_DIR}/public_key.pem"
+)

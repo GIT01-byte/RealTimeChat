@@ -5,7 +5,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
 import secrets
-from typing import Any, Union
+from typing import Union
 from datetime import timedelta, datetime, timezone
 
 import jwt
@@ -79,7 +79,7 @@ def create_refresh_token() -> tuple[str, str]:
     """
     token = secrets.token_urlsafe(64)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
-    logger.info(f"Создан refresh-токен для пользователя.")
+    logger.info("Создан refresh-токен для пользователя.")
     return token, token_hash
 
 
@@ -115,7 +115,7 @@ def hash_password(password: str) -> bytes:
     salt = bcrypt.gensalt()
     pwd_bytes: bytes = password.encode()
     hashed_pwd = bcrypt.hashpw(pwd_bytes, salt)
-    logger.debug(f"Пароль успешно захеширован.")
+    logger.debug("Пароль успешно захеширован.")
     return hashed_pwd
 
 
@@ -182,7 +182,7 @@ def decode_jwt(
     """
     if isinstance(token, (str, bytes)):
         decoded = jwt.decode(token, public_key, algorithms=[algorithm])
-        logger.debug(f"Токен успешно декодирован.")
+        logger.debug("Токен успешно декодирован.")
         return JWTPayload(
             sub=decoded["sub"],
             exp=decoded["exp"],

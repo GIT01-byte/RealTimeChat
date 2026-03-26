@@ -100,7 +100,7 @@ async def get_current_user_from_token(
     """
     try:
         payload = decode_access_token(token)
-        
+
         # Извлекаем данные из токена
         if not payload.sub or not payload.jti:
             raise InvalidTokenError("Missing required claims: sub or jti")
@@ -128,7 +128,7 @@ async def get_current_user_from_token(
 
 @async_timed_report()
 async def get_current_active_user(
-    current_user: UserSelfInfo = Depends(get_current_user_from_token)
+    current_user: UserSelfInfo = Depends(get_current_user_from_token),
 ) -> UserSelfInfo:
     """
     Возвращает активного пользователя.

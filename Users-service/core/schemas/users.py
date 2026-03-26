@@ -15,7 +15,7 @@ from pydantic import BaseModel, EmailStr
 
 class AvatarFileRead(BaseModel):
     model_config = {"from_attributes": True}
-    
+
     uuid: UUID
     s3_url: str
     category: str
@@ -24,7 +24,7 @@ class AvatarFileRead(BaseModel):
 
 class UserRead(BaseModel):
     model_config = {"from_attributes": True}
-    
+
     id: int
     username: str
     email: Optional[EmailStr] = None

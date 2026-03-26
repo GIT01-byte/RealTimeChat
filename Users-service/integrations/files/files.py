@@ -19,7 +19,9 @@ async def MS_upload_file(
                     detail=f"Invalid file upload request in file: {request}",
                 )
             if not request.upload_context:
-                logger.exception(f"Invalid file upload reguest in upload_context: {request}")
+                logger.exception(
+                    f"Invalid file upload reguest in upload_context: {request}"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid file upload request in upload_context: {request}",
@@ -30,7 +32,7 @@ async def MS_upload_file(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid file upload request in entity_id: {request}",
                 )
-            
+
             files = {
                 "file": (
                     request.file.filename,
@@ -47,7 +49,7 @@ async def MS_upload_file(
             logger.info(f"upload_file запросил - {query_params}")
 
             upload_response = await client.post(
-                url=f"http://krakend:8080/media_service/upload",
+                url="http://krakend:8080/media_service/upload",
                 params=query_params,
                 files=files,
                 follow_redirects=True,
@@ -155,7 +157,7 @@ async def MS_delete_file(file_uuid: str):
             logger.info(f"delete_file обработал - {response_data}")
 
             return {
-                "ok": response_data["ok"], 
+                "ok": response_data["ok"],
                 "message": response_data["message"],
             }
 

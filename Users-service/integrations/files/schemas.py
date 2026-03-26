@@ -1,5 +1,3 @@
-import datetime
-from uuid import UUID
 from fastapi import UploadFile
 from pydantic import BaseModel
 

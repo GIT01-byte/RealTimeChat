@@ -15,8 +15,8 @@ DOTENV_FILE_PATH = BASE_DIR / ".env"
 
 
 class AppSettings(BaseModel):
-    mode: str = 'DEV'
-    host: str = '0.0.0.0'
+    mode: str = "DEV"
+    host: str = "0.0.0.0"
     port: int = 8000
     enable_time_reports: bool = False
 
@@ -66,7 +66,7 @@ class Settings(BaseSettings):
         env_prefix="USERS_",
     )
 
-    app: AppSettings = AppSettings() 
+    app: AppSettings = AppSettings()
     jwt: JwtAuth = JwtAuth()
     db: DatabaseSettings
     redis: RedisSettings

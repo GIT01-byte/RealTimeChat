@@ -1,11 +1,15 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
+
+RUN pip install poetry
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml poetry.lock ./
 
-COPY . .
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-root --no-interaction
+
+COPY . /app/
 
 RUN mkdir -p /app/core/security_keys \
     && python -c "\
@@ -15,4 +19,4 @@ pk = ed25519.Ed25519PrivateKey.generate(); \
 open('/app/core/security_keys/private_key.pem','wb').write(pk.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())); \
 open('/app/core/security_keys/public_key.pem','wb').write(pk.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))"
 
-CMD ["sh", "-c", "alembic upgrade head && python main.py"]
+EXPOSE 8002

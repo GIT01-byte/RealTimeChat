@@ -13,8 +13,8 @@ from core.models.users import User
 
 class UserAdminView(ModelView, model=User):
     can_create = True
-    column_list = ("id", "username" "email", "avatar_links")
-    form_columns = ("id", "username" "email", "avatar_links")
+    column_list = ("id", "usernameemail", "avatar_links")
+    form_columns = ("id", "usernameemail", "avatar_links")
 
 
 def setup_admin(app: FastAPI, engine):
