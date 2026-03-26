@@ -8,6 +8,9 @@
     "router": {
       "auto_options": true
     },
+    "telemetry/usage": {
+      "disabled": true
+    },
     "security/cors": {
       "allow_origins": [
         "*"
