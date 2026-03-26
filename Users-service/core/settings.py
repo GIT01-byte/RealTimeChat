@@ -65,7 +65,7 @@ class Settings(BaseSettings):
         env_prefix="USERS_",
     )
 
-    app: AppSettings = AppSettings()
+    app: AppSettings
     jwt: JwtAuth = JwtAuth()
     db: DatabaseSettings
     redis: RedisSettings

@@ -143,7 +143,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      APP_MODE: PROD
+      USERS_APP_MODE: PROD
       USERS_DB_HOST: rt-chat-users-service-postgres
       USERS_DB_PORT: 5433
       USERS_DB_NAME: ${USERS_DB_NAME}
