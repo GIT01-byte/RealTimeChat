@@ -7,6 +7,8 @@ from fastapi import HTTPException, Request, status
 
 from .schemas import UserData
 
+API_URL = "http://176.12.67.28:80/api-gateway"
+
 
 async def get_current_user(request: Request):
     async with httpx.AsyncClient() as client:
@@ -19,7 +21,7 @@ async def get_current_user(request: Request):
                 )
 
             login_response = await client.get(
-                "http://rt-chat-krakend:8080/user/self_info/",
+                f"{API_URL}/user/self_info/",
                 headers={"Authorization": auth_token},
                 follow_redirects=True,
             )
@@ -51,7 +53,7 @@ async def get_users() -> dict[str, Any]:
     async with httpx.AsyncClient() as client:
         try:
             get_response = await client.get(
-                "http://rt-chat-krakend:8080/user/get_all_users/",
+                f"{API_URL}/user/get_all_users/",
                 follow_redirects=True,
             )
 
