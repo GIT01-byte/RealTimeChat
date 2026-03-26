@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
         "http://localhost",
         "http://localhost:8001",
         "http://127.0.0.1:5500",
+        "http://176.12.67.28",
     ]
 
     app.add_middleware(
