@@ -9,15 +9,14 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 BASE_DIR = Path(__file__).parent.parent
 DOTENV_FILE_PATH = BASE_DIR / ".env"
 
 
 class AppSettings(BaseModel):
-    mode: str = "DEV"
-    host: str = "0.0.0.0"
-    port: int = 8000
+    mode: str
+    host: str
+    port: int
     enable_time_reports: bool = False
 
 
