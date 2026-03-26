@@ -11,7 +11,7 @@ class AppConfig(BaseModel):
     name: str = "Real_Time_Chat"
     mode: str
     host: str
-    port: int
+    port: int = 8001
 
 
 class ApiV1Prefix(BaseModel):

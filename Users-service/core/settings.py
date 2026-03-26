@@ -16,7 +16,7 @@ DOTENV_FILE_PATH = BASE_DIR / ".env"
 class AppSettings(BaseModel):
     mode: str
     host: str
-    port: int
+    port: int = 8002
     enable_time_reports: bool = False
 
 
