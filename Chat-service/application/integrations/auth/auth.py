@@ -20,6 +20,7 @@ async def get_current_user(request: Request):
                     status_code=500, detail="Authorization token missing."
                 )
 
+            logger.debug(f"Попытка авторизации через {API_URL}/user/self_info/")
             login_response = await client.get(
                 f"{API_URL}/user/self_info/",
                 headers={"Authorization": auth_token},
@@ -27,14 +28,14 @@ async def get_current_user(request: Request):
             )
 
             if login_response.status_code != 200:
-                logger.warning(f"Авторизация не удалась: {login_response.status_code}")
+                logger.warning(f"Авторизация не удалась: status={login_response.status_code}, body={login_response.text}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=f"Authorization failed: {login_response.text}",
                 )
 
             response_data: dict = login_response.json()
-            return UserData(
+            user = UserData(
                 id=response_data["user_db"]["id"],
                 username=response_data["user_db"]["username"],
                 email=response_data["user_db"]["email"],
@@ -43,28 +44,35 @@ async def get_current_user(request: Request):
                 access_expire=response_data["jwt_payload"]["exp"],
                 iat=response_data["jwt_payload"]["iat"],
             )
+            logger.debug(f"Пользователь авторизован: id={user.id}, username={user.username!r}")
+            return user
 
+        except HTTPException:
+            raise
         except httpx.RequestError as exc:
-            logger.exception(f"Шлюз недоступен: {exc}")
+            logger.exception(f"Шлюз недоступен при авторизации: {exc}")
             raise HTTPException(status_code=503, detail=f"Gateway unavailable: {exc}")
 
 
 async def get_users() -> dict[str, Any]:
     async with httpx.AsyncClient() as client:
         try:
+            logger.debug(f"Попытка получить список пользователей через {API_URL}/user/get_all_users/")
             get_response = await client.get(
                 f"{API_URL}/user/get_all_users/",
                 follow_redirects=True,
             )
 
             if get_response.status_code != 200:
-                logger.warning(
-                    f"Ошибка получения списка пользователей: {get_response.text}"
-                )
+                logger.warning(f"Ошибка получения списка пользователей: status={get_response.status_code}, body={get_response.text}")
                 raise GetUsersListFailedError
 
-            return get_response.json()
+            data = get_response.json()
+            logger.debug(f"Получено пользователей: {len(data.get('users', []))}")
+            return data
 
+        except GetUsersListFailedError:
+            raise
         except httpx.RequestError as exc:
-            logger.exception(f"Шлюз недоступен: {exc}")
+            logger.exception(f"Шлюз недоступен при получении пользователей: {exc}")
             raise HTTPException(status_code=503, detail=f"Gateway unavailable: {exc}")
