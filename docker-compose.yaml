@@ -75,7 +75,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      RTCHAT_APP_MODE: ${RTCHAT_APP_MODE}
+      RTCHAT_APP_MODE: PROD
       RTCHAT_DB_HOST: rt-chat-service-postgres
       RTCHAT_DB_PORT: 5432
       RTCHAT_DB_NAME: ${RTCHAT_DB_NAME}
@@ -143,7 +143,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      APP_MODE: ${USERS_APP_MODE}
+      APP_MODE: PROD
       USERS_DB_HOST: rt-chat-users-service-postgres
       USERS_DB_PORT: 5433
       USERS_DB_NAME: ${USERS_DB_NAME}
