@@ -34,6 +34,10 @@ async def notify_user(user_id: int, message: dict):
     except WebSocketDisconnect:
         active_connections.pop(user_id, None)
         logger.debug(f"Пользователь {user_id} отключился во время отправки сообщения")
+    except Exception as e:
+        await websocket.close()
+        active_connections.pop(user_id, None)
+        logger.exception(f"WebSocket error: {e}")
 
 
 # ----- Основные API ендпоинты -----
@@ -129,15 +133,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
         websocket (WebSocket): вебсокет подлкючение
         user_id (int): ID пользователя прошедший авторизацию
     """
-    await websocket.accept()
-    active_connections[user_id] = websocket
-    logger.info(f"Пользователь {user_id} подключился")
     try:
+        await websocket.accept()
+        active_connections[user_id] = websocket
+        logger.info(f"Пользователь {user_id} подключился")
         while True:
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         active_connections.pop(user_id, None)
         logger.info(f"Пользователь {user_id} отключился")
+    except Exception as e:
+        await websocket.close()
+        active_connections.pop(user_id, None)
+        logger.exception(f"WebSocket error: {e}")
 
 
 # ----- Вспомогательные API ендпоинты -----

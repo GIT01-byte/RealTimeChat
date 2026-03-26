@@ -175,6 +175,19 @@
           ]
         }
       ]
+    },
+    {
+      "endpoint": "/user/search/",
+      "method": "GET",
+      "input_query_strings": ["search"],
+      "backend": [
+        {
+          "url_pattern": "/users/search/",
+          "host": [
+            "http://rt-chat-users-service:8002"
+          ]
+        }
+      ]
     }
   ]
 }

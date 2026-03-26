@@ -1,14 +1,10 @@
-FROM python:3.14-slim
-
-RUN pip install poetry
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock ./
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction
+COPY . .
 
-COPY . /app/
-
-EXPOSE 8001
+CMD ["sh", "-c", "alembic upgrade head && python -m application.web"]

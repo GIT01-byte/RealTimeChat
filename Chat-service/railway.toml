@@ -1,0 +1,8 @@
+[build]
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "alembic upgrade head && python -m application.web"
+healthcheckPath = "/api/v1/real_time_chat/health_check/"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"

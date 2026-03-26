@@ -204,6 +204,34 @@ class UsersRepo:
                 "Не удалось получить данные пользователей из-за ошибки базы данных"
             ) from e
 
+    @staticmethod
+    async def search_users(search_query: str) -> list[dict]:
+        logger.debug(f"Попытка поиска пользователей по шаблону: {search_query!r}")
+        try:
+            search_pattern = f"%{search_query}%"
+            async with db_manager.session_factory() as session:
+                users_data = await session.scalars(
+                    select(User).filter(
+                        User.username.ilike(search_pattern)
+                    )  # TODO сделать и поиск по другим столбцам, например по email
+                )
+                result = users_data.all()
+                users_data_list = [
+                    {"id": user.id, "username": user.username, "avatar": user.avatar}
+                    for user in result
+                ]
+                logger.debug(
+                    f"Найдено пользователей по запросу {search_query!r}: {len(users_data_list)}"
+                )
+                return users_data_list
+        except SQLAlchemyError as e:
+            logger.exception(
+                f"Ошибка БД при поиске пользователей по шаблону {search_query!r}"
+            )
+            raise RepositoryInternalError(
+                "Не удалось выполнить поиск пользователей из-за ошибки базы данных"
+            ) from e
+
 
 class RefreshTokensRepo:
     @staticmethod

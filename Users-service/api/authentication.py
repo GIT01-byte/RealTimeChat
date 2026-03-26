@@ -10,10 +10,13 @@ from core.db.repositories import UsersRepo
 from core.schemas.users import (
     RefreshRequest,
     TokenResponse,
+    UserSelfInfo,
 )
+from exceptions.base import BaseAPIException
 from exceptions.exceptions import (
     EntityNotFoundError,
     InvalidCredentialsError,
+    LogoutUserFailedError,
     PasswordRequiredError,
     RefreshUserTokensFailedError,
     RegistrationFailedError,
@@ -187,15 +190,24 @@ async def auth_refresh_jwt(
 @async_timed_report()
 async def auth_logout_user(
     response: Response,
-    current_user=Depends(get_current_active_user),
+    current_user: UserSelfInfo = Depends(get_current_active_user),
 ):
-    auth_service = AuthService()
-    access_jti = current_user["jti"]
-    user_id = current_user["user_id"]
-    await auth_service.loggout_user_logic(
-        response=response, access_jti=access_jti, user_id=user_id
-    )
-    return {"detail": "Выход выполнен успешно"}
+    user_id = current_user.user_db.id
+    logger.debug(f"Попытка выхода пользователя user_id={user_id}")
+    try:
+        auth_service = AuthService()
+        await auth_service.loggout_user_logic(
+            response=response,
+            access_jti=current_user.jwt_payload.jti,
+            user_id=user_id,
+        )
+        logger.info(f"Пользователь user_id={user_id} успешно вышел")
+        return {"detail": "Выход выполнен успешно"}
+    except BaseAPIException:
+        raise
+    except Exception as e:
+        logger.exception(f"Ошибка при выходе пользователя user_id={user_id}")
+        raise LogoutUserFailedError() from e
 
 
 # Получение информации о себе (авторизованном пользователе)
@@ -216,3 +228,21 @@ async def get_all_user():
     except Exception as e:
         logger.error(f"Ошибка при получении списка пользователей: {e}")
         raise RepositoryInternalError(detail="Failed to get users list")
+
+
+@auth_usage.get("/search/")
+async def search_users_test(
+    search: str,
+):
+    logger.debug(f"Поиск пользователей по шаблону: {search!r}")
+    try:
+        users = await UsersRepo.search_users(search_query=search)
+        logger.debug(f"Поиск {search!r}: найдено {len(users)} пользователей")
+        return {"users": users}
+    except RepositoryInternalError:
+        raise
+    except Exception as e:
+        logger.exception(
+            f"Неожиданная ошибка при поиске пользователей по шаблону {search!r}"
+        )
+        raise RepositoryInternalError("Не удалось выполнить поиск пользователей") from e
