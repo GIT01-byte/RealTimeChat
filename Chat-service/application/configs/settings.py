@@ -10,7 +10,7 @@ ENV_PATH = BASE_PATH / ".env"
 class AppConfig(BaseModel):
     name: str = "Real_Time_Chat"
     mode: str
-    host: str
+    host: str = "0.0.0.0"
     port: int = 8001
 
 

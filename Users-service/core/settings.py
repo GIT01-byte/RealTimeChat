@@ -14,8 +14,9 @@ DOTENV_FILE_PATH = BASE_DIR / ".env"
 
 
 class AppSettings(BaseModel):
+    name: str = "Users_Service"
     mode: str
-    host: str
+    host: str = "0.0.0.0"
     port: int = 8002
     enable_time_reports: bool = False
 
@@ -74,7 +75,7 @@ class Settings(BaseSettings):
 settings = Settings()  # type: ignore
 
 print()
-print("-------- Users Service --------")
+print(f"-------- {settings.app.name} --------")
 print(f"DB Host: {settings.db.host}")
 print(f"Redis URL: {settings.redis.REDIS_URL}")
 print(f"JWT Algorithm: {settings.jwt.algorithm}")
