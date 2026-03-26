@@ -7,7 +7,8 @@ from fastapi import HTTPException, Request, status
 
 from .schemas import UserData
 
-API_URL = "http://176.12.67.28:80/api-gateway"
+# Изнутри Docker сети обращаемся напрямую к Users-service, минуя KrakenD
+API_URL = "http://rt-chat-users-service:8002/users"
 
 
 async def get_current_user(request: Request):
@@ -20,9 +21,9 @@ async def get_current_user(request: Request):
                     status_code=500, detail="Authorization token missing."
                 )
 
-            logger.debug(f"Попытка авторизации через {API_URL}/user/self_info/")
+            logger.debug(f"Попытка авторизации через {API_URL}/me/")
             login_response = await client.get(
-                f"{API_URL}/user/self_info/",
+                f"{API_URL}/me/",
                 headers={"Authorization": auth_token},
                 follow_redirects=True,
             )
@@ -57,9 +58,9 @@ async def get_current_user(request: Request):
 async def get_users() -> dict[str, Any]:
     async with httpx.AsyncClient() as client:
         try:
-            logger.debug(f"Попытка получить список пользователей через {API_URL}/user/get_all_users/")
+            logger.debug(f"Попытка получить список пользователей через {API_URL}/get_all_users/")
             get_response = await client.get(
-                f"{API_URL}/user/get_all_users/",
+                f"{API_URL}/get_all_users/",
                 follow_redirects=True,
             )
 
