@@ -11,6 +11,8 @@ services:
       - "/etc/letsencrypt:/etc/letsencrypt"
     depends_on:
       - rt-chat-krakend
+      - rt-chat-chat-service
+    restart: unless-stopped
     networks:
       - app-network
 
