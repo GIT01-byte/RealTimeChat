@@ -5,7 +5,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
 from fastapi import FastAPI
-
 from sqladmin import Admin, ModelView
 
 from core.models.users import User
@@ -13,8 +12,8 @@ from core.models.users import User
 
 class UserAdminView(ModelView, model=User):
     can_create = True
-    column_list = ("id", "usernameemail", "avatar_links")
-    form_columns = ("id", "usernameemail", "avatar_links")
+    column_list = ("id", "username", "avatar_links")
+    form_columns = ("id", "username", "avatar_links")
 
 
 def setup_admin(app: FastAPI, engine):

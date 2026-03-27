@@ -83,7 +83,6 @@ async def auth_register_user(
     request: Request,
     response: Response,
     username: str = Form(..., min_length=3, max_length=64),
-    email: Optional[str] = Form(None),
     password: str = Form(..., min_length=8),
     profile: Optional[str] = Form(None),
     avatar_file: Optional[UploadFile] = File(None),
@@ -124,7 +123,6 @@ async def auth_register_user(
 
         payload = {
             "username": username,
-            "email": email,
             "profile": profile_dict,
         }
 

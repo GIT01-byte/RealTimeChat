@@ -1,7 +1,6 @@
 import os
 import sys
 
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
@@ -10,7 +9,7 @@ from typing import Any, List, Optional
 from uuid import UUID
 
 from fastapi import Form
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class AvatarFileRead(BaseModel):
@@ -27,7 +26,6 @@ class UserRead(BaseModel):
 
     id: int
     username: str
-    email: Optional[EmailStr] = None
     profile: Optional[Any] = None
     is_active: bool
     role: str

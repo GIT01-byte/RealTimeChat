@@ -315,7 +315,6 @@
 
     <form class="auth-form" id="register-form" onsubmit="register(event)">
       <input id="reg-username" placeholder="Имя пользователя" required />
-      <input id="reg-email" placeholder="Email" />
       <input id="reg-password" type="password" placeholder="Пароль (мин. 8 символов)" required />
       <button class="btn btn-primary" type="submit">Зарегистрироваться</button>
       <div class="auth-error" id="reg-error"></div>
@@ -430,7 +429,6 @@
         currentUser = {
           user_id: data.user_db.id,
           username: data.user_db.username,
-          email: data.user_db.email,
           role: data.user_db.role,
           is_active: data.user_db.is_active,
         }
@@ -445,7 +443,6 @@
       const body = new FormData()
       body.append('username', document.getElementById('reg-username').value)
       body.append('password', document.getElementById('reg-password').value)
-      body.append('email', document.getElementById('reg-email').value)
       try {
         const res = await fetch(`${GW}/user/register/`, { method: 'POST', body })
         const data = await res.json()

@@ -1,13 +1,11 @@
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class UserData(BaseModel):
     id: int
     username: str
-    email: Optional[EmailStr] = None
     is_active: bool
     jti: str
     access_expire: datetime

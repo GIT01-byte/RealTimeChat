@@ -29,7 +29,9 @@ async def get_current_user(request: Request):
             )
 
             if login_response.status_code != 200:
-                logger.warning(f"Авторизация не удалась: status={login_response.status_code}, body={login_response.text}")
+                logger.warning(
+                    f"Авторизация не удалась: status={login_response.status_code}, body={login_response.text}"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=f"Authorization failed: {login_response.text}",
@@ -39,13 +41,14 @@ async def get_current_user(request: Request):
             user = UserData(
                 id=response_data["user_db"]["id"],
                 username=response_data["user_db"]["username"],
-                email=response_data["user_db"]["email"],
                 is_active=response_data["user_db"]["is_active"],
                 jti=response_data["jwt_payload"]["jti"],
                 access_expire=response_data["jwt_payload"]["exp"],
                 iat=response_data["jwt_payload"]["iat"],
             )
-            logger.debug(f"Пользователь авторизован: id={user.id}, username={user.username!r}")
+            logger.debug(
+                f"Пользователь авторизован: id={user.id}, username={user.username!r}"
+            )
             return user
 
         except HTTPException:
@@ -58,14 +61,18 @@ async def get_current_user(request: Request):
 async def get_users() -> dict[str, Any]:
     async with httpx.AsyncClient() as client:
         try:
-            logger.debug(f"Попытка получить список пользователей через {API_URL}/get_all_users/")
+            logger.debug(
+                f"Попытка получить список пользователей через {API_URL}/get_all_users/"
+            )
             get_response = await client.get(
                 f"{API_URL}/get_all_users/",
                 follow_redirects=True,
             )
 
             if get_response.status_code != 200:
-                logger.warning(f"Ошибка получения списка пользователей: status={get_response.status_code}, body={get_response.text}")
+                logger.warning(
+                    f"Ошибка получения списка пользователей: status={get_response.status_code}, body={get_response.text}"
+                )
                 raise GetUsersListFailedError
 
             data = get_response.json()

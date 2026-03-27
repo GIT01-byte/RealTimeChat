@@ -14,7 +14,6 @@ from exceptions.exceptions import (
     UserAlreadyExistsError,
 )
 from integrations.files.schemas import NSFileUploadResponse
-from pydantic import EmailStr
 from sqlalchemy import delete, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from utils.logging import logger
@@ -29,23 +28,18 @@ class UsersRepo:
     @staticmethod
     async def create_user(payload: dict) -> Optional[User]:
         username = payload.get("username")
-        email = payload.get("email")
-        logger.debug(
-            f"Попытка создания пользователя с именем: {username!r}, email: {email!r}"
-        )
+        logger.debug(f"Попытка создания пользователя с именем: {username!r}")
         try:
             async with db_manager.session_factory() as session:
                 existing_user = await session.scalar(
-                    select(User).filter(
-                        or_(User.username == username, User.email == email)
-                    )
+                    select(User).filter(or_(User.username == username))
                 )
                 if existing_user:
                     logger.warning(
-                        f"Пользователь с именем: {username!r} или email: {email!r} уже существует"
+                        f"Пользователь с именем: {username!r} уже существует"
                     )
                     raise UserAlreadyExistsError(
-                        f"Пользователь с именем {username!r} или email {email!r} уже существует"
+                        f"Пользователь с именем {username!r} уже существует"
                     )
 
                 new_user = User(**payload)
@@ -134,36 +128,6 @@ class UsersRepo:
             ) from e
 
     @staticmethod
-    async def select_user_by_email(email: EmailStr) -> User | None:
-        logger.debug(f"Попытка выбрать пользователя по email: {email!r}")
-        try:
-            async with db_manager.session_factory() as session:
-                user = await session.scalar(select(User).where(User.email == email))
-                if not user:
-                    logger.debug(f"Пользователь с email: {email!r} не найден.")
-                    raise EntityNotFoundError(
-                        f"Пользователь с email {email!r} не найден."
-                    )
-                logger.debug(
-                    f"Найден пользователь с email: {email!r}, ID: {user.id}, Роль: {user.role}"
-                )
-                return user
-        except EntityNotFoundError:
-            raise
-        except SQLAlchemyError as e:
-            logger.exception(f"Ошибка БД при выборе пользователя по email {email!r}")
-            raise RepositoryInternalError(
-                "Не удалось выбрать пользователя по email из-за ошибки базы данных"
-            ) from e
-        except Exception as e:
-            logger.exception(
-                f"Неожиданная ошибка при выборе пользователя по email {email!r}"
-            )
-            raise RepositoryInternalError(
-                "Не удалось выбрать пользователя по email из-за неожиданной ошибки"
-            ) from e
-
-    @staticmethod
     async def get_all_users():
         logger.debug("Попытка получить всех пользователей")
         try:
@@ -211,9 +175,7 @@ class UsersRepo:
             search_pattern = f"%{search_query}%"
             async with db_manager.session_factory() as session:
                 users_data = await session.scalars(
-                    select(User).filter(
-                        User.username.ilike(search_pattern)
-                    )  # TODO сделать и поиск по другим столбцам, например по email
+                    select(User).filter(User.username.ilike(search_pattern))
                 )
                 result = users_data.all()
                 users_data_list = [

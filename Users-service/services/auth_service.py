@@ -6,19 +6,19 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from uuid import UUID
 import asyncio
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
-from fastapi import HTTPException, Response, UploadFile
-
-from core.settings import settings
-from core.db.repositories import AvatarFilesRepo, UsersRepo, RefreshTokensRepo
-from core.models.users import RefreshToken, User
-from core.schemas.users import TokenResponse, UserRead
+from api.auth_deps import (
+    clear_cookie_with_tokens,
+    set_tokens_cookie,
+)
 from core.app_redis.client import get_redis_client
-from core.schemas.users import AccessToken
-
+from core.db.repositories import AvatarFilesRepo, RefreshTokensRepo, UsersRepo
+from core.models.users import RefreshToken, User
+from core.schemas.users import AccessToken, TokenResponse, UserRead
+from core.settings import settings
 from exceptions.exceptions import (
     EntityNotFoundError,
     FilesUploadError,
@@ -34,29 +34,24 @@ from exceptions.exceptions import (
     UserInactiveError,
     ValidateAuthUserFailedError,
 )
-
-from utils.security import (
-    check_password,
-    create_access_token,
-    create_refresh_token as gen_refresh_token,
-    hash_password,
-    hash_token,
-)
-from utils.logging import logger
-from utils.time_decorator import time_all_methods, async_timed_report
-
-from api.auth_deps import (
-    clear_cookie_with_tokens,
-    set_tokens_cookie,
-)
-
-from integrations.files.schemas import NSFileUploadRequest, NSFileUploadResponse
+from fastapi import HTTPException, Response, UploadFile
+from integrations.files.constants import USERS_AVATAR_NAME
 from integrations.files.files import (
     MS_upload_file,
 )
-from integrations.files.constants import USERS_AVATAR_NAME
-
+from integrations.files.schemas import NSFileUploadRequest, NSFileUploadResponse
 from services.roles import ALL_ROLES, AccessRights
+from utils.logging import logger
+from utils.security import (
+    check_password,
+    create_access_token,
+    hash_password,
+    hash_token,
+)
+from utils.security import (
+    create_refresh_token as gen_refresh_token,
+)
+from utils.time_decorator import async_timed_report, time_all_methods
 
 
 @time_all_methods(async_timed_report())
@@ -253,7 +248,6 @@ class AuthService:
             user = UserRead(
                 id=user_data_from_db.id,
                 username=user_data_from_db.username,
-                email=user_data_from_db.email,  # type: ignore
                 is_active=user_data_from_db.is_active,
                 role=user_data_from_db.role,
             )
@@ -367,7 +361,7 @@ class AuthService:
         Хеширует пароль перед сохранением
 
         Args:
-            payload: Словарь с данными пользователя (username, email, profile)
+            payload: Словарь с данными пользователя (username, profile)
             password: Пароль пользователя в открытом виде
             avatar_file: Опциональный файл аватара
 
@@ -375,13 +369,12 @@ class AuthService:
             dict: Словарь с user_id, new_username, role, avatar_uuid
 
         Raises:
-            UserAlreadyExistsError: Пользователь с таким username или email уже существует
+            UserAlreadyExistsError: Пользователь с таким username уже существует
             RegistrationFailedError: Ошибка при регистрации
             FilesUploadError: Ошибка загрузки аватара
         """
         username = payload.get("username", "N/A")
-        email = payload.get("email", "N/A")
-        logger.info(f"Начало регистрации пользователя {username!r}, email: {email!r}")
+        logger.info(f"Начало регистрации пользователя {username!r}")
         try:
             # 1. Хеширование пароля и создание пользователя
             logger.debug(f"Хеширование пароля для {username!r}")

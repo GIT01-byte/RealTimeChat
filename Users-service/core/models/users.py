@@ -50,7 +50,6 @@ class User(Base):
 
     username: Mapped[str_64] = mapped_column(String, unique=True, nullable=False)
     hashed_password: Mapped[bytes] = mapped_column(nullable=False)
-    email: Mapped[str | None] = mapped_column(String, unique=True)
     profile: Mapped[Any | None] = mapped_column(JSON)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

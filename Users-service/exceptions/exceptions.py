@@ -5,6 +5,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
 from fastapi import status
+
 from .base import BaseAPIException, RepositoryError
 
 
@@ -95,7 +96,7 @@ class UserNotFoundError(EntityNotFoundError):
 
 
 class UserAlreadyExistsError(DataConflictError):
-    def __init__(self, detail: str = "User with this username or email already exists"):
+    def __init__(self, detail: str = "User with this username already exists"):
         super().__init__(detail=detail)
 
 
