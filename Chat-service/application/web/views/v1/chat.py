@@ -11,12 +11,14 @@ from application.exceptions.exceptions import (
     GetMessagesBetweenUsersFailedError,
     SendMessagesFailedError,
 )
-from application.integrations.auth.auth import get_current_user, get_users
-from application.integrations.auth.schemas import UserData
+from application.integrations.files.files import MS_upload_file
+from application.integrations.files.schemas import MSFileUploadRequest
+from application.integrations.users.auth import get_current_user, get_users
+from application.integrations.users.schemas import UserData
 from application.repositories.chat_messages_repo import ChatMessagesRepo
 from application.utils.logging import logger
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, UploadFile, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix=settings.api.v1.service, tags=["Real Time Chat"])
@@ -164,68 +166,16 @@ async def test_websocket_endpoint(websocket: WebSocket):
         print(f"Websocket exception: {e}")
 
 
-# ----- Старый код для удобного обращения -----
-
-# class RoomConnection:
-#     """ "
-#     Класс активных подключений к комнате
-#     """
-
-#     def __init__(self, room_id: UUID) -> None:
-#         self.active_connections: dict[UUID, WebSocket] = {}
-#         self.room_id = room_id
-
-#     async def add_client(self, client: ChatClient):
-#         """Подключение клиента к комнате"""
-#         await client.websocket.accept()
-#         self.active_connections[client.client_id] = client.websocket
-
-#     async def remove_client(self, client_id: UUID):
-#         """Отключение клиента от комнаты"""
-#         del self.active_connections[client_id]
-
-#     def get_all_connections(self):
-#         return list(self.active_connections.values())
-
-#     async def broadcast(self, message: ChatMessage):
-#         for client in self.active_connections.values():
-#             await client.send_json(data=message.model_dump(mode="json"))
-
-
-# @router.websocket("/ws/{room_id}/{client_name}")
-# async def ws(
-#     websocket: WebSocket,
-#     room_id: UUID,
-#     client_name: str,
-# ):
-#     client = ChatClient(client_id=uuid4(), client_name=client_name, websocket=websocket)
-#     room = RoomConnection(room_id)
-#     await room.add_client(client)
-#     logger.info(f"Client {client_name!r} connected to room {room_id}")
-
-#     session_maker: async_sessionmaker[AsyncSession] = websocket.app.state.session_maker
-#     try:
-#         async with session_maker() as session:
-#             chat_messages_repo = ChatMessagesRepo(session=session)
-#             while True:
-#                 data = await websocket.receive_text()
-#                 msg_db = await chat_messages_repo.create(
-#                     author_id=client.client_id, room_id=room_id, text=data
-#                 )
-#                 await session.commit()
-#                 await room.broadcast(
-#                     ChatMessage(
-#                         author_id=msg_db.author_id,
-#                         author_name=client_name,
-#                         text=msg_db.text,
-#                         time=msg_db.created_at,
-#                     )
-#                 )
-#     except WebSocketDisconnect:
-#         await room.remove_client(client.client_id)
-#         logger.info(f"Client {client_name!r} disconnected from room {room_id}")
-#     except Exception as e:
-#         logger.exception(
-#             f"Unexpected error in ws handler client={client_name!r} room={room_id}: {e}"
-#         )
-#         await websocket.close()
+@router.post("/test/media-service/upload")
+async def test_upload_file(
+    file_to_upload: UploadFile,
+    upload_context: str,
+    entity_id: int,
+):
+    request = MSFileUploadRequest(
+        file=file_to_upload,
+        upload_context=upload_context,
+        entity_id=entity_id,
+    )
+    response = await MS_upload_file(request)
+    return response

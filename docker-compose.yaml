@@ -1,8 +1,22 @@
 services:
+  # Service name                    Service role
+  # rt_chat-nginx-balancer	        Nginx
+  # rt_chat-krakend-gateway	        KrakenD
+  # rt_chat-chat-api	              Chat FastAPI
+  # rt_chat-chat-postgres	          БД чата
+  # rt_chat-chat-redis	            Redis чата
+  # rt_chat-users-api	              Users FastAPI
+  # rt_chat-users-postgres	        БД пользователей
+  # rt_chat-users-redis	            Redis пользователей
+  # rt_chat-media-api	              Media FastAPI
+  # rt_chat-media-postgres	        БД медиа
+  # rt_chat-media-rabbitmq	        RabbitMQ
+  # rt_chat-media-outbox_worker	    Outbox воркер
+  # rt_chat-media-file_processor	  File processor
   # --- БАЛАНСИРОВЩИК (Nginx) ---
-  rt-chat-nginx:
+  rt_chat-nginx-balancer:
     image: nginx:stable-alpine
-    container_name: rt-chat-nginx-load-balancer
+    container_name: rt_chat-nginx-balancer
     ports:
       - "80:80"
     volumes:
@@ -10,31 +24,31 @@ services:
       - "./Chat-service/template:/usr/share/nginx/html"
       - "/etc/letsencrypt:/etc/letsencrypt"
     depends_on:
-      - rt-chat-krakend
-      - rt-chat-service
+      - rt_chat-krakend-gateway
+      - rt_chat-chat-api
     restart: unless-stopped
     networks:
       - app-network
 
   # --- API ШЛЮЗ (Krakend) ---
-  rt-chat-krakend:
+  rt_chat-krakend-gateway:
     image: devopsfaith/krakend:2.4.0
-    container_name: rt-chat-krakend-gateway
+    container_name: rt_chat-krakend-gateway
     ports:
       - "8080:8080"
     volumes:
       - ./krakend.json:/etc/krakend/krakend.json
     depends_on:
-      - rt-chat-service
-      - rt-chat-users-service
+      - rt_chat-chat-api
+      - rt_chat-users-api
     networks:
       - app-network
-  
+
   # --- Chat Service ---
-  rt-chat-service-postgres:
+  rt_chat-chat-postgres:
     image: postgres:17
     command: -p 5432
-    container_name: rt-chat-chat-postgres
+    container_name: rt_chat-chat-postgres
     environment:
       POSTGRES_DB: ${RTCHAT_DB_NAME}
       POSTGRES_USER: ${RTCHAT_DB_USER}
@@ -52,9 +66,9 @@ services:
     networks:
       - app-network
 
-  rt-chat-service-redis:
+  rt_chat-chat-redis:
     image: redis:8
-    container_name: rt-chat-chat-redis
+    container_name: rt_chat-chat-redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -69,26 +83,26 @@ services:
     networks:
       - app-network
 
-  rt-chat-service:
+  rt_chat-chat-api:
     build:
       context: ./Chat-service
       dockerfile: Dockerfile
-    container_name: rt-chat-chat-service
+    container_name: rt_chat-chat-api
     ports:
       - "8001:8001"
     environment:
       RTCHAT_APP_MODE: PROD
-      RTCHAT_DB_HOST: rt-chat-service-postgres
+      RTCHAT_DB_HOST: rt_chat-chat-postgres
       RTCHAT_DB_PORT: 5432
       RTCHAT_DB_NAME: ${RTCHAT_DB_NAME}
       RTCHAT_DB_USER: ${RTCHAT_DB_USER}
       RTCHAT_DB_PWD: ${RTCHAT_DB_PWD}
-      RTCHAT_REDIS_HOST: rt-chat-service-redis
+      RTCHAT_REDIS_HOST: rt_chat-chat-redis
       RTCHAT_REDIS_PORT: 6379
     depends_on:
-      rt-chat-service-postgres:
+      rt_chat-chat-postgres:
         condition: service_healthy
-      rt-chat-service-redis:
+      rt_chat-chat-redis:
         condition: service_healthy
     command: ["bash", "-c", "alembic upgrade head && python -m application.web"]
     logging:
@@ -99,10 +113,10 @@ services:
       - app-network
 
   # --- Users Service ---
-  rt-chat-users-service-postgres:
+  rt_chat-users-postgres:
     image: postgres:17
     command: -p 5433
-    container_name: rt-chat-users-postgres
+    container_name: rt_chat-users-postgres
     environment:
       POSTGRES_DB: ${USERS_DB_NAME}
       POSTGRES_USER: ${USERS_DB_USER}
@@ -120,9 +134,9 @@ services:
     networks:
       - app-network
 
-  rt-chat-users-service-redis:
+  rt_chat-users-redis:
     image: redis:7-alpine
-    container_name: rt-chat-users-redis
+    container_name: rt_chat-users-redis
     ports:
       - "6380:6380"
     healthcheck:
@@ -137,29 +151,182 @@ services:
     networks:
       - app-network
 
-  rt-chat-users-service:
+  rt_chat-users-api:
     build:
       context: ./Users-service
       dockerfile: dockerfile
-    container_name: rt-chat-users-service
+    container_name: rt_chat-users-api
     ports:
       - "8002:8002"
     environment:
       USERS_APP_MODE: PROD
-      USERS_DB_HOST: rt-chat-users-service-postgres
+      USERS_DB_HOST: rt_chat-users-postgres
       USERS_DB_PORT: 5433
       USERS_DB_NAME: ${USERS_DB_NAME}
       USERS_DB_USER: ${USERS_DB_USER}
       USERS_DB_PWD: ${USERS_DB_PWD}
-      USERS_REDIS_HOST: rt-chat-users-service-redis
+      USERS_REDIS_HOST: rt_chat-users-redis
       USERS_REDIS_PORT: 6380
     depends_on:
-      rt-chat-users-service-postgres:
+      rt_chat-users-postgres:
         condition: service_healthy
-      rt-chat-users-service-redis:
+      rt_chat-users-redis:
         condition: service_healthy
-    command: ["bash", "-c", "alembic upgrade head && python main.py"]
+    command: ["bash", "-c", "alembic upgrade head && uvicorn main:main_app --host 0.0.0.0 --port 8002"]
     restart: always
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - app-network
+
+  # --- Media Service ---
+  rt_chat-media-postgres:
+    image: postgres:17
+    command: -p 5434
+    container_name: rt_chat-media-postgres
+    environment:
+      POSTGRES_DB: ${MEDIA_DB_NAME}
+      POSTGRES_USER: ${MEDIA_DB_USER}
+      POSTGRES_PASSWORD: ${MEDIA_DB_PWD}
+    ports:
+      - "5434:5434"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 5434 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_media:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  rt_chat-media-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rt_chat-media-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${MEDIA_RABBITMQ_LOGIN}
+      RABBITMQ_DEFAULT_PASS: ${MEDIA_RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  rt_chat-media-outbox_worker:
+    build:
+      context: ./Media-service
+      dockerfile: Dockerfile
+    container_name: rt_chat-media-outbox_worker
+    environment:
+      MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+      MEDIA_DB_HOST: rt_chat-media-postgres
+      MEDIA_DB_PORT: 5434
+      MEDIA_DB_NAME: ${MEDIA_DB_NAME}
+      MEDIA_DB_USER: ${MEDIA_DB_USER}
+      MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+      MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
+      MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
+      MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
+      MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+      MEDIA_RABBITMQ_HOST: rt_chat-media-rabbitmq
+      MEDIA_RABBITMQ_PORT: 5672
+      MEDIA_RABBITMQ_LOGIN: ${MEDIA_RABBITMQ_LOGIN}
+      MEDIA_RABBITMQ_PASSWORD: ${MEDIA_RABBITMQ_PASSWORD}
+      MEDIA_OUTBOX_ENABLED: ${MEDIA_OUTBOX_ENABLED}
+      MEDIA_OUTBOX_POLL_INTERVAL: ${MEDIA_OUTBOX_POLL_INTERVAL}
+    depends_on:
+      rt_chat-media-postgres:
+        condition: service_healthy
+      rt_chat-media-rabbitmq:
+        condition: service_healthy
+    command: python -m application.outbox_worker
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - app-network
+
+  rt_chat-media-file_processor:
+    build:
+      context: ./Media-service
+      dockerfile: Dockerfile
+    container_name: rt_chat-media-file_processor
+    environment:
+      MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+      MEDIA_DB_HOST: rt_chat-media-postgres
+      MEDIA_DB_PORT: 5434
+      MEDIA_DB_NAME: ${MEDIA_DB_NAME}
+      MEDIA_DB_USER: ${MEDIA_DB_USER}
+      MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+      MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
+      MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
+      MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
+      MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+      MEDIA_RABBITMQ_HOST: rt_chat-media-rabbitmq
+      MEDIA_RABBITMQ_PORT: 5672
+      MEDIA_RABBITMQ_LOGIN: ${MEDIA_RABBITMQ_LOGIN}
+      MEDIA_RABBITMQ_PASSWORD: ${MEDIA_RABBITMQ_PASSWORD}
+    depends_on:
+      rt_chat-media-postgres:
+        condition: service_healthy
+      rt_chat-media-rabbitmq:
+        condition: service_healthy
+    command: python -m application.file_process_worker
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - app-network
+
+  rt_chat-media-api:
+    build:
+      context: ./Media-service
+      dockerfile: Dockerfile
+    container_name: rt_chat-media-api
+    ports:
+      - "8003:8003"
+    environment:
+      MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+      MEDIA_DB_HOST: rt_chat-media-postgres
+      MEDIA_DB_PORT: 5434
+      MEDIA_DB_NAME: ${MEDIA_DB_NAME}
+      MEDIA_DB_USER: ${MEDIA_DB_USER}
+      MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+      MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
+      MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
+      MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
+      MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+      MEDIA_RABBITMQ_HOST: rt_chat-media-rabbitmq
+      MEDIA_RABBITMQ_PORT: 5672
+      MEDIA_RABBITMQ_LOGIN: ${MEDIA_RABBITMQ_LOGIN}
+      MEDIA_RABBITMQ_PASSWORD: ${MEDIA_RABBITMQ_PASSWORD}
+      MEDIA_OUTBOX_ENABLED: ${MEDIA_OUTBOX_ENABLED}
+      MEDIA_OUTBOX_POLL_INTERVAL: ${MEDIA_OUTBOX_POLL_INTERVAL}
+    depends_on:
+      rt_chat-media-postgres:
+        condition: service_healthy
+      rt_chat-media-rabbitmq:
+        condition: service_healthy
+      rt_chat-media-outbox_worker:
+        condition: service_started
+      rt_chat-media-file_processor:
+        condition: service_started
+    command: ["bash", "-c", "alembic upgrade head && service clamav-daemon start && python -m application.web"]
     logging:
       driver: json-file
       options:
@@ -172,6 +339,9 @@ volumes:
   redis_data_chat:
   postgres_data_users:
   redis_data_users:
+  postgres_data_media:
+  rabbitmq_data:
+    driver: local
 
 networks:
   app-network:

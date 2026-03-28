@@ -1,15 +1,15 @@
-from fastapi import HTTPException, status
-
 import httpx
-
-from .schemas import NSFileUploadRequest, NSFileUploadResponse
-
+from fastapi import HTTPException, status
 from utils.logging import logger
+
+from .schemas import MSFileUploadRequest, MSFileUploadResponse
+
+KRAKEND_URL = "http://rt_chat-krakend-gateway:8080"
 
 
 async def MS_upload_file(
-    request: NSFileUploadRequest,
-) -> NSFileUploadResponse:
+    request: MSFileUploadRequest,
+) -> MSFileUploadResponse:
     async with httpx.AsyncClient() as client:
         try:
             if not request.file:
@@ -49,7 +49,7 @@ async def MS_upload_file(
             logger.info(f"upload_file запросил - {query_params}")
 
             upload_response = await client.post(
-                url="http://krakend:8080/media_service/upload",
+                url=f"{KRAKEND_URL}/media_service/upload",
                 params=query_params,
                 files=files,
                 follow_redirects=True,
@@ -65,12 +65,14 @@ async def MS_upload_file(
             response_data = upload_response.json()
             logger.info(f"upload_file обработал - {response_data}")
 
-            return NSFileUploadResponse(
+            return MSFileUploadResponse(
+                ok=response_data["ok"],
+                message=response_data["message"],
+                status=response_data["status"],
                 uuid=response_data["file"]["uuid"],
-                s3_url=response_data["file"]["s3_url"],
+                size=response_data["file"]["size"],
                 content_type=response_data["file"]["content_type"],
                 category=response_data["file"]["category"],
-                uploaded_at_s3=response_data["file"]["uploaded_at"],
             )
         except httpx.RequestError as exc:
             logger.exception(f"Gateway unavailable: {exc}")
@@ -95,8 +97,8 @@ async def MS_upload_file(
 async def MS_get_file(file_uuid: str):
     async with httpx.AsyncClient() as client:
         try:
-            get_file_response = await client.post(
-                url=f"http://krakend:8080/media_service/files/{file_uuid}/",
+            get_file_response = await client.get(
+                url=f"{KRAKEND_URL}/media_service/files/{file_uuid}/",
                 follow_redirects=True,
             )
 
@@ -110,12 +112,14 @@ async def MS_get_file(file_uuid: str):
             response_data = get_file_response.json()
             logger.info(f"get_file обработал - {response_data}")
 
-            return NSFileUploadResponse(
+            return MSFileUploadResponse(
+                ok=response_data["ok"],
+                message=response_data["message"],
+                status=response_data["status"],
                 uuid=response_data["uuid"],
-                s3_url=response_data["s3_url"],
+                size=response_data["size"],
                 content_type=response_data["content_type"],
                 category=response_data["category"],
-                uploaded_at_s3=response_data["created_at"],
             )
 
         except httpx.RequestError as exc:
@@ -142,7 +146,7 @@ async def MS_delete_file(file_uuid: str):
     async with httpx.AsyncClient() as client:
         try:
             delete_file_response = await client.delete(
-                url=f"http://krakend:8080/media_service/files/delete/{file_uuid}/",
+                url=f"{KRAKEND_URL}/media_service/files/delete/{file_uuid}/",
                 follow_redirects=True,
             )
 

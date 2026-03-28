@@ -42,7 +42,7 @@
         {
           "url_pattern": "/api/v1/real_time_chat/health_check/",
           "host": [
-            "http://rt-chat-chat-service:8001"
+            "http://rt_chat-chat-api:8001"
           ]
         }
       ]
@@ -54,7 +54,19 @@
         {
           "url_pattern": "/users/health_check",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/media_service/health_check/",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/media_service/health_check/",
+          "host": [
+            "http://rt_chat-media-api:8003"
           ]
         }
       ]
@@ -67,7 +79,7 @@
         {
           "url_pattern": "/api/v1/real_time_chat/",
           "host": [
-            "http://rt-chat-chat-service:8001"
+            "http://rt_chat-chat-api:8001"
           ]
         }
       ]
@@ -81,7 +93,7 @@
         {
           "url_pattern": "/api/v1/real_time_chat/messages",
           "host": [
-            "http://rt-chat-chat-service:8001"
+            "http://rt_chat-chat-api:8001"
           ]
         }
       ]
@@ -95,7 +107,7 @@
         {
           "url_pattern": "/api/v1/real_time_chat/messages/{user_id}",
           "host": [
-            "http://rt-chat-chat-service:8001"
+            "http://rt_chat-chat-api:8001"
           ]
         }
       ]
@@ -108,7 +120,7 @@
         {
           "url_pattern": "/users/register/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
           ]
         }
       ]
@@ -121,7 +133,7 @@
         {
           "url_pattern": "/users/login/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
           ]
         }
       ]
@@ -135,7 +147,7 @@
         {
           "url_pattern": "/users/tokens/refresh/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
           ]
         }
       ]
@@ -149,7 +161,7 @@
         {
           "url_pattern": "/users/logout/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
           ]
         }
       ]
@@ -162,7 +174,7 @@
         {
           "url_pattern": "/users/me/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
           ]
         }
       ]
@@ -174,7 +186,7 @@
         {
           "url_pattern": "/users/get_all_users/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
           ]
         }
       ]
@@ -187,7 +199,60 @@
         {
           "url_pattern": "/users/search/",
           "host": [
-            "http://rt-chat-users-service:8002"
+            "http://rt_chat-users-api:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/media_service/upload",
+      "method": "POST",
+      "input_query_strings": ["upload_context", "entity_id"],
+      "input_headers": ["Content-Type"],
+      "timeout": "10s",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/media_service/upload",
+          "host": [
+            "http://rt_chat-media-api:8003"
+          ]
+        }
+      ],
+      "output_encoding": "json"
+    },
+    {
+      "endpoint": "/media_service/files/{file_uuid}/",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/media_service/files/{file_uuid}/",
+          "host": [
+            "http://rt_chat-media-api:8003"
+          ]
+        }
+      ],
+      "output_encoding": "json"
+    },
+    {
+      "endpoint": "/media_service/files/{file_uuid}/view/",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/media_service/files/{file_uuid}/view/",
+          "host": [
+            "http://rt_chat-media-api:8003"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/media_service/files/delete/{file_uuid}/",
+      "method": "DELETE",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/media_service/files/delete/{file_uuid}/",
+          "host": [
+            "http://rt_chat-media-api:8003"
           ]
         }
       ]

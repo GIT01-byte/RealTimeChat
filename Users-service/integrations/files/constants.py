@@ -1,1 +1,0 @@
-USERS_AVATAR_NAME = "avatar"
