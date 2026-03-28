@@ -1,12 +1,6 @@
-import os
-import sys
-from uuid import UUID, uuid7
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
 from datetime import datetime
 from typing import Any, List
+from uuid import UUID, uuid7
 
 from sqlalchemy import (
     JSON,

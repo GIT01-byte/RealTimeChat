@@ -1,9 +1,3 @@
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
 from typing import Annotated, Optional
 
 from core.db.repositories import UsersRepo
@@ -45,7 +39,12 @@ dev_usage = APIRouter(redirect_slashes=False)
 
 @auth.get("/health_check")
 async def health_check():
-    return {"success": "Note users service started"}
+    return {
+        "success": True,
+        "service": "Users service",
+        "status": "running",
+        "version": "0.0.1",
+    }
 
 
 # Вход пользователя с выдачей токенов

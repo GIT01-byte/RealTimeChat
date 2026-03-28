@@ -1,19 +1,13 @@
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
 import tracemalloc
 from contextlib import asynccontextmanager
 
 from api import api_router
 from core.settings import settings
-from errors_handlers import register_errors_handlers
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
+from utils.errors_handlers import register_errors_handlers
 from utils.logging import logger
 
 # Включаем отслеживание памяти, для дебага ошибок с ассинхронными функциями

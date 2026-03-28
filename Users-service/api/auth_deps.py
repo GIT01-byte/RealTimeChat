@@ -1,34 +1,25 @@
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
-from core.schemas.users import UserRead, UserSelfInfo
-
-from fastapi import Depends, Response
-from fastapi.security import OAuth2PasswordBearer
-from redis import Redis
-from jwt import PyJWTError
-
 from core.app_redis.client import get_redis_client
 from core.db.repositories import UsersRepo
+from core.schemas.users import UserRead, UserSelfInfo
+from core.settings import settings
 from exceptions.exceptions import (
+    AccessTokenRevokedError,
     InvalidTokenError,
     SetCookieFailedError,
-    AccessTokenRevokedError,
     UserInactiveError,
     UserNotFoundError,
 )
+from fastapi import Depends, Response
+from fastapi.security import OAuth2PasswordBearer
+from jwt import PyJWTError
+from redis import Redis
+from utils.logging import logger
 from utils.security import (
-    REFRESH_TOKEN_TYPE,
     ACCESS_TOKEN_TYPE,
+    REFRESH_TOKEN_TYPE,
     decode_access_token,
 )
-
-from core.settings import settings
-from utils.logging import logger
-from utils.time_decorator import sync_timed_report, async_timed_report
+from utils.time_decorator import async_timed_report, sync_timed_report
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login/")
 
@@ -137,6 +128,6 @@ async def get_current_active_user(
     :raises UserInactiveError: Если пользователь неактивен
     :return: Активный пользователь
     """
-    if current_user.user_db.is_active == True:
+    if current_user.user_db.is_active:
         return current_user
     raise UserInactiveError()

@@ -1,11 +1,3 @@
-import os
-import sys
-
-# Добавляем корневую директорию проекта в путь
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
-
 import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -35,11 +27,14 @@ from exceptions.exceptions import (
     ValidateAuthUserFailedError,
 )
 from fastapi import HTTPException, Response, UploadFile
-from integrations.files.constants import USERS_AVATAR_NAME
 from integrations.files.files import (
     MS_upload_file,
 )
-from integrations.files.schemas import NSFileUploadRequest, NSFileUploadResponse
+from integrations.files.schemas import (
+    USERS_AVATAR_NAME,
+    MSFileUploadRequest,
+    MSFileUploadResponse,
+)
 from services.roles import ALL_ROLES, AccessRights
 from utils.logging import logger
 from utils.security import (
@@ -279,7 +274,7 @@ class AuthService:
 
     async def _upload_avatar(
         self, file: UploadFile, entity_id: int
-    ) -> NSFileUploadResponse:
+    ) -> MSFileUploadResponse:
         """
         Загружает аватар в S3 через Media Service
 
@@ -295,7 +290,7 @@ class AuthService:
         """
         logger.info(f"Загрузка аватара {file.filename!r} для user_id: {entity_id}")
         try:
-            request = NSFileUploadRequest(
+            request = MSFileUploadRequest(
                 upload_context=USERS_AVATAR_NAME, file=file, entity_id=entity_id
             )
             response = await MS_upload_file(request)
@@ -315,7 +310,7 @@ class AuthService:
             raise FilesUploadError from e
 
     async def _save_file_to_db(
-        self, user_id: int, file_data: NSFileUploadResponse
+        self, user_id: int, file_data: MSFileUploadResponse
     ) -> UUID:
         """
         Сохраняет метаданные аватара в базу данных

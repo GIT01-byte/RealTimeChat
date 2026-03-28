@@ -1,9 +1,3 @@
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
 from datetime import datetime
 from typing import Any, List, Optional
 from uuid import UUID
@@ -32,17 +26,17 @@ class UserRead(BaseModel):
     avatar: List[AvatarFileRead] = []
 
 
-class UserSelfInfo(BaseModel):
-    jwt_payload: JWTPayload
-    user_db: UserRead
-
-
 class JWTPayload(BaseModel):
     sub: str
     exp: datetime
     jti: str
     role: str
     iat: datetime
+
+
+class UserSelfInfo(BaseModel):
+    jwt_payload: JWTPayload
+    user_db: UserRead
 
 
 class AccessToken(BaseModel):

@@ -1,5 +1,4 @@
 from dishka import Provider, Scope, provide
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.core.files.use_cases.delete_file import DeleteFileUseCase
 from application.core.files.use_cases.process_file import ProcessFileUseCase

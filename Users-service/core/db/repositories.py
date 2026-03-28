@@ -1,19 +1,13 @@
-import os
-import sys
-from uuid import UUID
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from exceptions.exceptions import (
     EntityNotFoundError,
     RepositoryInternalError,
     UserAlreadyExistsError,
 )
-from integrations.files.schemas import NSFileUploadResponse
+from integrations.files.schemas import MSFileUploadResponse
 from sqlalchemy import delete, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from utils.logging import logger
@@ -273,7 +267,7 @@ class RefreshTokensRepo:
                 result = await session.execute(query)
                 await session.commit()
                 logger.info(
-                    f"Аннулировано {result.rowcount} refresh токенов для user_id: {user_id}"
+                    f"Аннулировано {result.rowcount} refresh токенов для user_id: {user_id}"  # type: ignore
                 )  # type: ignore
         except SQLAlchemyError as e:
             logger.exception(
@@ -316,40 +310,40 @@ class RefreshTokensRepo:
 
 class AvatarFilesRepo:
     @staticmethod
-    async def create_avatar(
-        user_id: int, file_data: NSFileUploadResponse
-    ) -> AvatarFiles:
-        logger.debug(f"Попытка создания аватара для user_id: {user_id}")
-        try:
-            async with db_manager.session_factory() as session:
-                avatar = AvatarFiles(
-                    user_id=user_id,
-                    uuid=UUID(file_data.uuid),
-                    s3_url=file_data.s3_url,
-                    category=file_data.category,
-                    content_type=file_data.content_type,
-                    uploaded_at_s3=file_data.uploaded_at_s3,
-                )
-                session.add(avatar)
-                await session.flush()
-                await session.commit()
-                await session.refresh(avatar)
-                logger.info(
-                    f"Аватар ID:{avatar.id} для user_id:{user_id} успешно создан"
-                )
-                return avatar
-        except SQLAlchemyError as e:
-            logger.exception(f"Ошибка БД при создании аватара для user_id {user_id}")
-            raise RepositoryInternalError(
-                "Не удалось создать аватар из-за ошибки базы данных"
-            ) from e
-        except Exception as e:
-            logger.exception(
-                f"Неожиданная ошибка при создании аватара для user_id {user_id}"
-            )
-            raise RepositoryInternalError(
-                "Не удалось создать аватар из-за неожиданной ошибки"
-            ) from e
+    async def create_avatar(user_id: int, file_data: MSFileUploadResponse):  # FIXME
+        pass
+
+    #         logger.debug(f"Попытка создания аватара для user_id: {user_id}")
+    #         try:
+    #             async with db_manager.session_factory() as session:
+    #                 avatar = AvatarFiles(
+    #                     user_id=user_id,
+    #                     uuid=UUID(file_data.uuid),
+    #                     s3_url=file_data.s3_url,
+    #                     category=file_data.category,
+    #                     content_type=file_data.content_type,
+    #                     uploaded_at_s3=file_data.uploaded_at_s3,
+    #                 )
+    #                 session.add(avatar)
+    #                 await session.flush()
+    #                 await session.commit()
+    #                 await session.refresh(avatar)
+    #                 logger.info(
+    #                     f"Аватар ID:{avatar.id} для user_id:{user_id} успешно создан"
+    #                 )
+    #                 return avatar
+    #         except SQLAlchemyError as e:
+    #             logger.exception(f"Ошибка БД при создании аватара для user_id {user_id}")
+    #             raise RepositoryInternalError(
+    #                 "Не удалось создать аватар из-за ошибки базы данных"
+    #             ) from e
+    #         except Exception as e:
+    #             logger.exception(
+    #                 f"Неожиданная ошибка при создании аватара для user_id {user_id}"
+    #             )
+    #             raise RepositoryInternalError(
+    #                 "Не удалось создать аватар из-за неожиданной ошибки"
+    #             ) from e
 
     @staticmethod
     async def get_avatar_by_user_id(user_id: int) -> Optional[AvatarFiles]:
@@ -433,7 +427,7 @@ class AvatarFilesRepo:
                 result = await session.execute(query)
                 await session.commit()
                 logger.info(
-                    f"Удалено {result.rowcount} аватаров для user_id: {user_id}"
+                    f"Удалено {result.rowcount} аватаров для user_id: {user_id}"  # type: ignore
                 )  # type: ignore
         except SQLAlchemyError as e:
             logger.exception(f"Ошибка БД при удалении аватаров для user_id {user_id}")
