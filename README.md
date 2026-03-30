@@ -5,5 +5,5 @@
 - backend (Fastapi + WebSockets)
 - frontend (Vue + Socket.IO)
 
-## Поробовать 
+## Попробовать 
 http://176.12.67.28/
