@@ -78,6 +78,7 @@ async def send_message(
     message: ChatMessageCreate,
     current_user: UserData = Depends(get_current_user),
 ):
+    logger.debug(f"send_message: message={message}, current_user={current_user}")
     try:
         send_message_data = SendMessageInputDTO(
             sender_id=current_user.id,
