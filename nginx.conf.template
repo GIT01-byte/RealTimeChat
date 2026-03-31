@@ -15,7 +15,8 @@ http {
         resolver 127.0.0.11 valid=30s ipv6=off;
 
         location / {
-            proxy_pass http://rt_chat-frontend:3000;
+            set $frontend http://rt_chat-frontend:3000;
+            proxy_pass $frontend;
         }
 
         # KrakenD API Gateway

@@ -27,6 +27,8 @@ services:
     depends_on:
       - rt_chat-krakend-gateway
       - rt_chat-chat-api
+      - rt_chat-users-api
+      - rt_chat-frontend
     environment:
       - SERVER_NAME=${SERVER_NAME}
     command: ["/bin/sh", "-c", "envsubst '${SERVER_NAME}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
