@@ -1,5 +1,4 @@
 import asyncio
-from typing import Optional
 
 from application.configs.settings import settings
 from application.core.chats.schemas.send_message_uc import SendMessageInputDTO
@@ -11,7 +10,6 @@ from application.exceptions.exceptions import (
 )
 from application.integrations.files.files import MS_upload_file
 from application.integrations.files.schemas import (
-    CHAT_MESSAGE_FILES_NAME,
     MSFileUploadRequest,
 )
 from application.integrations.users.auth import get_current_user, get_users
@@ -22,7 +20,6 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import (
     APIRouter,
     Depends,
-    File,
     Form,
     UploadFile,
     WebSocket,
@@ -81,52 +78,52 @@ async def send_message(
     current_user: UserData = Depends(get_current_user),
     recipient_id: int = Form(...),
     text: str = Form(...),
-    image: Optional[list[UploadFile]] = File(None),
-    video: Optional[list[UploadFile]] = File(None),
-    audio: Optional[list[UploadFile]] = File(None),
+    # image: Optional[list[UploadFile]] = File(None),
+    # video: Optional[list[UploadFile]] = File(None),
+    # audio: Optional[list[UploadFile]] = File(None),
 ):
     try:  # TODO доделать отпарвку файлов
-        logger.debug(f"Получены медиа-файлы для сообщения: {text}")
-        # Если были переданы медиа файлы, загружаем их в сервис файлов
-        upload_requests = []
-        if image:
-            upload_requests.extend(
-                [
-                    MSFileUploadRequest(
-                        file=file,
-                        upload_context=CHAT_MESSAGE_FILES_NAME,
-                        entity_id=current_user.id,  # TODO сделать user_id-recipient_id
-                    )
-                    for file in image
-                ]
-            )
-        if video:
-            upload_requests.extend(
-                [
-                    MSFileUploadRequest(
-                        file=file,
-                        upload_context=CHAT_MESSAGE_FILES_NAME,
-                        entity_id=current_user.id,
-                    )
-                    for file in video
-                ]
-            )
-        if audio:
-            upload_requests.extend(
-                [
-                    MSFileUploadRequest(
-                        file=file,
-                        upload_context=CHAT_MESSAGE_FILES_NAME,
-                        entity_id=current_user.id,
-                    )
-                    for file in audio
-                ]
-            )
+        # logger.debug(f"Получены медиа-файлы для сообщения: {text}")
+        # # Если были переданы медиа файлы, загружаем их в сервис файлов
+        # upload_requests = []
+        # if image:
+        #     upload_requests.extend(
+        #         [
+        #             MSFileUploadRequest(
+        #                 file=file,
+        #                 upload_context=CHAT_MESSAGE_FILES_NAME,
+        #                 entity_id=current_user.id,  # TODO сделать user_id-recipient_id
+        #             )
+        #             for file in image
+        #         ]
+        #     )
+        # if video:
+        #     upload_requests.extend(
+        #         [
+        #             MSFileUploadRequest(
+        #                 file=file,
+        #                 upload_context=CHAT_MESSAGE_FILES_NAME,
+        #                 entity_id=current_user.id,
+        #             )
+        #             for file in video
+        #         ]
+        #     )
+        # if audio:
+        #     upload_requests.extend(
+        #         [
+        #             MSFileUploadRequest(
+        #                 file=file,
+        #                 upload_context=CHAT_MESSAGE_FILES_NAME,
+        #                 entity_id=current_user.id,
+        #             )
+        #             for file in audio
+        #         ]
+        #     )
 
-            # Загружаем файлы асинхронно
-            tasks = [MS_upload_file(req) for req in upload_requests]
-            await asyncio.gather(*tasks)  # TODO получать UUID каждого файла
-            logger.debug("Медиа-файлы успешно загружены")
+        #     # Загружаем файлы асинхронно
+        #     tasks = [MS_upload_file(req) for req in upload_requests]
+        #     await asyncio.gather(*tasks)  # TODO получать UUID каждого файла
+        #     logger.debug("Медиа-файлы успешно загружены")
 
         send_message_data = SendMessageInputDTO(
             sender_id=current_user.id,
