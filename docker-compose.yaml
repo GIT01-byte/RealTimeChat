@@ -15,9 +15,9 @@ services:
   # rt_chat-media-file_processor	  File processor
   
   # --- БАЛАНСИРОВЩИК (Nginx) ---
-  rt_chat-nginx-balancer:
+  rt_chat-nginx:
     image: nginx:stable-alpine
-    container_name: rt_chat-nginx-balancer
+    container_name: rt_chat-nginx
     ports:
       - "80:80"
     volumes:
@@ -38,13 +38,13 @@ services:
   rt_chat-krakend-gateway:
     image: devopsfaith/krakend:2.4.0
     container_name: rt_chat-krakend-gateway
-    ports:
-      - "8080:8080"
     volumes:
       - ./krakend.json:/etc/krakend/krakend.json
     depends_on:
-      - rt_chat-chat-api
-      - rt_chat-users-api
+      rt_chat-chat-api:
+        condition: service_started
+      rt_chat-users-api:
+        condition: service_started
     networks:
       - app-network
 
@@ -57,8 +57,9 @@ services:
         - VITE_GW_URL=http://${SERVER_NAME}/api-gateway
         - VITE_WS_URL=ws://${SERVER_NAME}
     container_name: rt_chat-frontend
-    ports:
-      - "3000:3000"
+    depends_on:
+      rt_chat-nginx:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -75,8 +76,6 @@ services:
       POSTGRES_DB: ${RTCHAT_DB_NAME}
       POSTGRES_USER: ${RTCHAT_DB_USER}
       POSTGRES_PASSWORD: ${RTCHAT_DB_PWD}
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p 5432 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -91,8 +90,6 @@ services:
   rt_chat-chat-redis:
     image: redis:8
     container_name: rt_chat-chat-redis
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -110,8 +107,6 @@ services:
       context: ./Chat-service
       dockerfile: Dockerfile
     container_name: rt_chat-chat-api
-    ports:
-      - "8001:8001"
     environment:
       RTCHAT_APP_MODE: PROD
       RTCHAT_DB_HOST: rt_chat-chat-postgres
@@ -143,8 +138,6 @@ services:
       POSTGRES_DB: ${USERS_DB_NAME}
       POSTGRES_USER: ${USERS_DB_USER}
       POSTGRES_PASSWORD: ${USERS_DB_PWD}
-    ports:
-      - "5433:5433"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p 5433 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -159,8 +152,6 @@ services:
   rt_chat-users-redis:
     image: redis:7-alpine
     container_name: rt_chat-users-redis
-    ports:
-      - "6380:6380"
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "6380", "ping"]
       interval: 10s
@@ -178,8 +169,6 @@ services:
       context: ./Users-service
       dockerfile: dockerfile
     container_name: rt_chat-users-api
-    ports:
-      - "8002:8002"
     environment:
       USERS_APP_MODE: PROD
       USERS_DB_HOST: rt_chat-users-postgres
