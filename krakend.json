@@ -38,6 +38,7 @@
     {
       "endpoint": "/chat_service/health_check/",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/real_time_chat/health_check/",
@@ -50,6 +51,7 @@
     {
       "endpoint": "/users_service/health_check/",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/users/health_check",
@@ -62,6 +64,7 @@
     {
       "endpoint": "/media_service/health_check/",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/media_service/health_check/",
@@ -75,6 +78,7 @@
       "endpoint": "/chat/",
       "method": "GET",
       "input_headers": ["Authorization"],
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/real_time_chat/",
@@ -88,7 +92,7 @@
       "endpoint": "/chat/messages",
       "method": "POST",
       "input_headers": ["Authorization", "Content-Type"],
-      "output_encoding": "json",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/real_time_chat/messages",
@@ -102,7 +106,7 @@
       "endpoint": "/chat/messages/{user_id}",
       "method": "GET",
       "input_headers": ["Authorization"],
-      "output_encoding": "json",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/real_time_chat/messages/{user_id}",
@@ -115,7 +119,7 @@
     {
       "endpoint": "/user/register/",
       "method": "POST",
-      "output_encoding": "json",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/users/register/",
@@ -128,7 +132,7 @@
     {
       "endpoint": "/user/login/",
       "method": "POST",
-      "output_encoding": "json",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/users/login/",
@@ -141,7 +145,7 @@
     {
       "endpoint": "/user/refresh_tokens/",
       "method": "POST",
-      "output_encoding": "json",
+      "output_encoding": "no-op",
       "input_headers": ["Authorization"],
       "backend": [
         {
@@ -155,7 +159,7 @@
     {
       "endpoint": "/user/logout/",
       "method": "POST",
-      "output_encoding": "json",
+      "output_encoding": "no-op",
       "input_headers": ["Authorization"],
       "backend": [
         {
@@ -170,6 +174,7 @@
       "endpoint": "/user/self_info/",
       "method": "GET",
       "input_headers": ["Authorization"],
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/users/me/",
@@ -182,6 +187,7 @@
     {
       "endpoint": "/user/get_all_users/",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/users/get_all_users/",
@@ -195,6 +201,7 @@
       "endpoint": "/user/search/",
       "method": "GET",
       "input_query_strings": ["search"],
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/users/search/",
@@ -210,6 +217,7 @@
       "input_query_strings": ["upload_context", "entity_id"],
       "input_headers": ["Content-Type"],
       "timeout": "10s",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/media_service/upload",
@@ -217,12 +225,12 @@
             "http://rt_chat-media-api:8003"
           ]
         }
-      ],
-      "output_encoding": "json"
+      ]
     },
     {
       "endpoint": "/media_service/files/{file_uuid}/",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/media_service/files/{file_uuid}/",
@@ -230,12 +238,12 @@
             "http://rt_chat-media-api:8003"
           ]
         }
-      ],
-      "output_encoding": "json"
+      ]
     },
     {
       "endpoint": "/media_service/files/{file_uuid}/view/",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/media_service/files/{file_uuid}/view/",
@@ -248,6 +256,7 @@
     {
       "endpoint": "/media_service/files/delete/{file_uuid}/",
       "method": "DELETE",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/media_service/files/delete/{file_uuid}/",

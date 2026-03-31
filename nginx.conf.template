@@ -14,11 +14,8 @@ http {
 
         resolver 127.0.0.11 valid=30s ipv6=off;
 
-        root /usr/share/nginx/html;
-        index index.html;
-
         location / {
-            try_files $uri $uri/ /index.html;
+            proxy_pass http://rt_chat-frontend:3000;
         }
 
         # KrakenD API Gateway
