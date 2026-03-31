@@ -20,12 +20,15 @@ services:
     ports:
       - "80:80"
     volumes:
-      - "./nginx.conf:/etc/nginx/nginx.conf"
+      - './nginx.conf.template:/etc/nginx/nginx.conf.template'
       - "./Chat-service/template:/usr/share/nginx/html"
       - "/etc/letsencrypt:/etc/letsencrypt"
     depends_on:
       - rt_chat-krakend-gateway
       - rt_chat-chat-api
+    environment:
+      - SERVER_IP=${SERVER_IP}
+    command: ["/bin/sh", "-c", "envsubst '${SERVER_IP}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
     restart: unless-stopped
     networks:
       - app-network
