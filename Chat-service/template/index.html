@@ -440,16 +440,30 @@
       e.preventDefault()
       const errEl = document.getElementById('reg-error')
       errEl.textContent = ''
+      const username = document.getElementById('reg-username').value
+      const password = document.getElementById('reg-password').value
       const body = new FormData()
-      body.append('username', document.getElementById('reg-username').value)
-      body.append('password', document.getElementById('reg-password').value)
+      body.append('username', username)
+      body.append('password', password)
       try {
         const res = await fetch(`${GW}/user/register/`, { method: 'POST', body })
         const data = await res.json()
         if (!res.ok) { errEl.textContent = data.detail || 'Ошибка регистрации'; return }
-        errEl.style.color = '#2ecc71'
-        errEl.textContent = 'Успешно! Войдите в аккаунт.'
-        switchTab('login')
+        // Автоматически входим с теми же данными
+        const loginBody = new FormData()
+        loginBody.append('username', username)
+        loginBody.append('password', password)
+        const loginRes = await fetch(`${GW}/user/login/`, { method: 'POST', body: loginBody })
+        const loginData = await loginRes.json()
+        if (!loginRes.ok) {
+          errEl.style.color = '#2ecc71'
+          errEl.textContent = 'Зарегистрирован! Войдите вручную.'
+          switchTab('login')
+          return
+        }
+        setTokens(loginData.access_token, loginData.refresh_token)
+        const ok = await fetchSelfInfo()
+        if (ok) await enterChat()
       } catch { errEl.textContent = 'Сервер недоступен' }
     }
 
