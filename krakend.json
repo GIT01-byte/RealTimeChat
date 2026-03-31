@@ -92,14 +92,12 @@
       "endpoint": "/chat/messages",
       "method": "POST",
       "input_headers": ["Authorization", "Content-Type"],
-      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/v1/real_time_chat/messages",
           "host": [
             "http://rt_chat-chat-api:8001"
-          ],
-          "encoding": "no-op"
+          ]
         }
       ]
     },
