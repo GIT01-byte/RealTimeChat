@@ -8,10 +8,11 @@ from fastapi import HTTPException, Request, status
 from .schemas import UserData
 
 # Изнутри Docker сети обращаемся напрямую к Users-service, минуя KrakenD
-API_URL = "http://rt_chat-users-api:8002/users"
+KRAKEND_URL = "http://rt_chat-krakend-gateway:8080"
 
 
 async def get_current_user(request: Request):
+    logger.debug("Запрос к эндпоинту /user/self_info/")
     async with httpx.AsyncClient() as client:
         try:
             auth_token = request.headers.get("authorization")
@@ -21,9 +22,9 @@ async def get_current_user(request: Request):
                     status_code=500, detail="Authorization token missing."
                 )
 
-            logger.debug(f"Попытка авторизации через {API_URL}/me/")
+            logger.debug(f"Попытка авторизации через {KRAKEND_URL}/user/self_info/")
             login_response = await client.get(
-                f"{API_URL}/me/",
+                f"{KRAKEND_URL}/user/self_info/",
                 headers={"Authorization": auth_token},
                 follow_redirects=True,
             )
@@ -50,7 +51,6 @@ async def get_current_user(request: Request):
                 f"Пользователь авторизован: id={user.id}, username={user.username!r}"
             )
             return user
-
         except HTTPException:
             raise
         except httpx.RequestError as exc:
@@ -59,13 +59,14 @@ async def get_current_user(request: Request):
 
 
 async def get_users() -> dict[str, Any]:
+    logger.debug("Запрос к эндпоинту /user/get_all_users/")
     async with httpx.AsyncClient() as client:
         try:
             logger.debug(
-                f"Попытка получить список пользователей через {API_URL}/get_all_users/"
+                f"Попытка получить список пользователей через {KRAKEND_URL}/user/get_all_users/"
             )
             get_response = await client.get(
-                f"{API_URL}/get_all_users/",
+                f"{KRAKEND_URL}/user/get_all_users/",
                 follow_redirects=True,
             )
 
@@ -78,7 +79,6 @@ async def get_users() -> dict[str, Any]:
             data = get_response.json()
             logger.debug(f"Получено пользователей: {len(data.get('users', []))}")
             return data
-
         except GetUsersListFailedError:
             raise
         except httpx.RequestError as exc:
