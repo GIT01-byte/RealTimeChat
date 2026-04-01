@@ -2,12 +2,10 @@ import asyncio
 
 from application.configs.settings import settings
 from application.core.chats.schemas.messages import ChatMessageCreate
-from application.core.chats.schemas.send_message_uc import SendMessageInputDTO
 from application.core.chats.use_cases.send_message import SendMessageUseCase
 from application.exceptions.base import BaseAPIException
 from application.exceptions.exceptions import (
     GetMessagesBetweenUsersFailedError,
-    SendMessagesFailedError,
 )
 from application.integrations.files.files import MS_upload_file
 from application.integrations.files.schemas import (
@@ -74,41 +72,47 @@ async def get_chat(user_data: UserData = Depends(get_current_user)):
 @router.post("/messages")
 @inject
 async def send_message(
-    send_message_uc: FromDishka[SendMessageUseCase],
     message: ChatMessageCreate,
     current_user: UserData = Depends(get_current_user),
+    send_message_uc: SendMessageUseCase = FromDishka(),
 ):
     logger.debug(f"send_message: message={message}, current_user={current_user}")
-    try:
-        send_message_data = SendMessageInputDTO(
-            sender_id=current_user.id,
-            recipient_id=message.recipient_id,
-            text=message.text,
-        )
-        send_message_output = await send_message_uc.execute(data=send_message_data)
+    # try:
+    #     send_message_data = SendMessageInputDTO(
+    #         sender_id=current_user.id,
+    #         recipient_id=message.recipient_id,
+    #         text=message.text,
+    #     )
+    #     send_message_output = await send_message_uc.execute(data=send_message_data)
 
-        # Формируем данные сообщения для отправки
-        message_data = {
-            "sender_id": send_message_output.sender_id,
-            "recipient_id": send_message_output.recipient_id,
-            "text": send_message_output.text,
-        }
+    #     # Формируем данные сообщения для отправки
+    #     message_data = {
+    #         "sender_id": send_message_output.sender_id,
+    #         "recipient_id": send_message_output.recipient_id,
+    #         "text": send_message_output.text,
+    #     }
 
-        # Уведомляем получателя и отправителя через WebSocket
-        await notify_user(send_message_output.recipient_id, message_data)
-        await notify_user(send_message_output.sender_id, message_data)
+    #     # Уведомляем получателя и отправителя через WebSocket
+    #     await notify_user(send_message_output.recipient_id, message_data)
+    #     await notify_user(send_message_output.sender_id, message_data)
 
-        return {
-            "recipient_id": send_message_output.recipient_id,
-            "text": send_message_output.text,
-            "status": "ok",
-            "msg": "Message saved!",
-        }
-    except BaseAPIException:
-        raise
-    except Exception as e:
-        logger.exception(f"Ошибка при отправке сообщения: {e}")
-        raise SendMessagesFailedError from e
+    #     return {
+    #         "recipient_id": send_message_output.recipient_id,
+    #         "text": send_message_output.text,
+    #         "status": "ok",
+    #         "msg": "Message saved!",
+    #     }
+    # except BaseAPIException:
+    #     raise
+    # except Exception as e:
+    #     logger.exception(f"Ошибка при отправке сообщения: {e}")
+    #     raise SendMessagesFailedError from e
+    return {
+        "recipient_id": message.recipient_id,
+        "text": message.text,
+        "status": "ok",
+        "msg": "Message saved!",
+    }
 
 
 @router.get("/messages/{user_id}")
