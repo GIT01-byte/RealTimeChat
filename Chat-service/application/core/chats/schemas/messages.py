@@ -1,12 +1,12 @@
 import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatMessageCreate(BaseModel):
-    recipient_id: int
-    text: str
+    recipient_id: int = Field(ge=0)
+    text: str = Field(min_length=1, max_length=4096)
 
 
 class ChatMessageRead(BaseModel):
