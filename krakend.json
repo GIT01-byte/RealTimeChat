@@ -100,7 +100,7 @@
           "host": [
             "http://rt_chat-chat-api:8001"
           ],
-          "encoding": "json"
+          "encoding": "no-op"
         }
       ]
     },
