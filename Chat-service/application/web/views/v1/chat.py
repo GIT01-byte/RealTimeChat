@@ -22,6 +22,7 @@ from fastapi import (
     APIRouter,
     Body,
     Depends,
+    Request,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -75,10 +76,12 @@ async def get_chat(user_data: UserData = Depends(get_current_user)):
 @router.post("/messages")
 @inject
 async def send_message(
+    request: Request,
     send_message_uc: FromDishka[SendMessageUseCase] = ...,
-    message: ChatMessageCreate = Body(...),
     current_user: UserData = Depends(get_current_user),
 ):
+    body = await request.json()
+    message = ChatMessageCreate(**body)
     logger.debug(f"send_message: message={message}, current_user={current_user}")
     try:
         send_message_data = SendMessageInputDTO(
