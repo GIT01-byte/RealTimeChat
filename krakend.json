@@ -99,7 +99,8 @@
           "url_pattern": "/api/v1/real_time_chat/messages",
           "host": [
             "http://rt_chat-chat-api:8001"
-          ]
+          ],
+          "encoding": "json"
         }
       ]
     },
