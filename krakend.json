@@ -92,7 +92,6 @@
       "endpoint": "/chat/messages",
       "method": "POST",
       "input_headers": ["Authorization", "Content-Type"],
-      "encoding": "no-op",
       "output_encoding": "no-op",
       "timeout": "10s",
       "backend": [
@@ -101,16 +100,7 @@
           "host": [
             "http://rt_chat-chat-api:8001"
           ],
-          "encoding": "no-op",
-          "extra_config": {
-            "modifier/martian": {
-              "header.Modifier": {
-                "scope": ["request"],
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            }
-          }
+          "encoding": "no-op"
         }
       ]
     },
