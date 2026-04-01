@@ -1,7 +1,6 @@
 import asyncio
 
 from application.configs.settings import settings
-from application.core.chats.schemas.messages import ChatMessageCreate
 from application.core.chats.schemas.send_message_uc import SendMessageInputDTO
 from application.core.chats.use_cases.send_message import SendMessageUseCase
 from application.exceptions.base import BaseAPIException
@@ -22,7 +21,6 @@ from fastapi import (
     APIRouter,
     Body,
     Depends,
-    Request,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -76,18 +74,19 @@ async def get_chat(user_data: UserData = Depends(get_current_user)):
 @router.post("/messages")
 @inject
 async def send_message(
-    request: Request,
+    recipient_id: int = Body(...),
+    text: str = Body(...),
     send_message_uc: FromDishka[SendMessageUseCase] = ...,
     current_user: UserData = Depends(get_current_user),
 ):
-    body = await request.json()
-    message = ChatMessageCreate(**body)
-    logger.debug(f"send_message: message={message}, current_user={current_user}")
+    logger.debug(
+        f"send_message: message={recipient_id}/{text}, current_user={current_user}"
+    )
     try:
         send_message_data = SendMessageInputDTO(
             sender_id=current_user.id,
-            recipient_id=message.recipient_id,
-            text=message.text,
+            recipient_id=recipient_id,
+            text=text,
         )
         send_message_output = await send_message_uc.execute(data=send_message_data)
 
