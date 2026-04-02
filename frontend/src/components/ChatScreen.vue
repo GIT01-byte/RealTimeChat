@@ -69,8 +69,11 @@ async function handleSend(text) {
 
 async function handleLogout() {
   disconnectWS()
-  await logout()
-  emit('logout')
+  try {
+    await logout()
+  } finally {
+    emit('logout')
+  }
 }
 </script>
 

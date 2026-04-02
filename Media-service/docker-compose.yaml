@@ -44,27 +44,6 @@ services:
     networks:
       - app-network
   
-  rt-chat-jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: rt-chat-jaeger
-    ports:
-      - "16686:16686" # UI
-      - "14269:14269" # Admin/Health check
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-    environment:
-      # Enable OTLP (OpenTelemetry Protocol) receiver for modern tracing
-      COLLECTOR_OTLP_ENABLED: true
-      LOG_LEVEL: debug
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s # Время на прогрев
-    networks:
-      - app-network
-  
   rt-chat-media-service-outbox_worker:
     build:
       context: .
@@ -178,8 +157,6 @@ services:
       rt-chat-media-service-postgres:
         condition: service_healthy
       rt-chat-rabbitmq:
-        condition: service_healthy
-      rt-chat-jaeger:
         condition: service_healthy
       rt-chat-media-service-outbox_worker:
         condition: service_started

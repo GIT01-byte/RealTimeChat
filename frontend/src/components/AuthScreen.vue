@@ -1,13 +1,21 @@
 <template>
   <div class="auth-screen">
-    <div class="auth-logo">💬 RT Chat</div>
+
+    <!-- Приветственный экран -->
+    <div v-if="showWelcome" class="welcome">
+      <div class="welcome-icon">💬</div>
+      <h1 class="welcome-title">RT Chat</h1>
+      <p class="welcome-desc">{{ WELCOME_TEXT }}</p>
+      <button class="btn btn-primary welcome-btn" @click="closeWelcome">Начать</button>
+    </div>
+
+    <template v-else>
 
     <div class="auth-tabs">
       <div :class="['auth-tab', tab === 'login' && 'active']" @click="tab = 'login'">Вход</div>
       <div :class="['auth-tab', tab === 'register' && 'active']" @click="tab = 'register'">Регистрация</div>
     </div>
 
-    <!-- Login -->
     <form v-if="tab === 'login'" class="auth-form" @submit.prevent="handleLogin">
       <input v-model="username" placeholder="Имя пользователя" required />
       <input v-model="password" type="password" placeholder="Пароль" required />
@@ -17,7 +25,6 @@
       <div class="auth-error">{{ error }}</div>
     </form>
 
-    <!-- Register -->
     <form v-else class="auth-form" @submit.prevent="handleRegister">
       <input v-model="username" placeholder="Имя пользователя" required />
       <input v-model="password" type="password" placeholder="Пароль (мин. 8 символов)" required />
@@ -26,12 +33,18 @@
       </button>
       <div class="auth-error">{{ error }}</div>
     </form>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { login, register } from '../useAuth'
+
+// ───── Настройки приветствия ─────
+const WELCOME_TEXT = 'Мессенджер для общения в реальном времени. Быстро, удобно, без лишнего.'
+const WELCOME_STORAGE_KEY = 'rt_chat_welcome_shown'
+// ─────────────────────────────────
 
 const emit = defineEmits(['logged-in'])
 
@@ -40,6 +53,18 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const showWelcome = ref(false)
+
+onMounted(() => {
+  if (!localStorage.getItem(WELCOME_STORAGE_KEY)) {
+    showWelcome.value = true
+  }
+})
+
+function closeWelcome() {
+  showWelcome.value = false
+  localStorage.setItem(WELCOME_STORAGE_KEY, '1')
+}
 
 async function handleLogin() {
   error.value = ''
@@ -67,6 +92,31 @@ async function handleRegister() {
 <style scoped>
 .auth-screen { width: 360px; }
 
+/* ───── Welcome ───── */
+.welcome {
+  text-align: center;
+  padding: 8px 0 32px;
+}
+
+.welcome-icon { font-size: 48px; margin-bottom: 12px; }
+
+.welcome-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #7c6af7;
+  margin-bottom: 10px;
+}
+
+.welcome-desc {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.welcome-btn { width: 100%; padding: 12px; font-size: 15px; }
+
+/* ───── Auth ───── */
 .auth-logo {
   text-align: center;
   font-size: 28px;
@@ -98,11 +148,7 @@ async function handleRegister() {
   margin-bottom: -2px;
 }
 
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
 
 .auth-form input {
   background: #1c1f2e;
@@ -114,7 +160,6 @@ async function handleRegister() {
   outline: none;
   transition: border-color .2s;
 }
-
 .auth-form input:focus { border-color: #7c6af7; }
 
 .btn {

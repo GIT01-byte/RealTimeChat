@@ -14,7 +14,6 @@ Media Service отвечает за загрузку, хранение, вали
 - **Хранение** - загрузка в S3-совместимое хранилище (Selectel)
 - **Метаданные** - сохранение информации о файлах в PostgreSQL
 - **Асинхронная обработка** - использование Transactional Outbox Pattern для надежной доставки
-- **Трассировка** - интеграция с OpenTelemetry и Jaeger
 - **Dependency Injection** - использование Dishka для управления зависимостями
 
 ## 🏗️ Архитектура
@@ -74,7 +73,6 @@ Media Service отвечает за загрузку, хранение, вали
 - **Pydantic** - валидация данных
 - **Dishka** - dependency injection
 - **OpenTelemetry** - трассировка
-- **Jaeger** - визуализация трейсов
 - **Docker** - контейнеризация
 
 ## 📦 Поддерживаемые типы файлов
@@ -199,7 +197,6 @@ python -m application.file_process_worker.main
 
 - **API**: http://localhost:8003
 - **API Docs**: http://localhost:8003/docs
-- **Jaeger UI**: http://localhost:16686
 - **RabbitMQ Management**: http://localhost:15672
 
 ## 🔄 Transactional Outbox Pattern

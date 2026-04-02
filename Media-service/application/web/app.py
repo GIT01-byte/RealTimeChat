@@ -1,4 +1,7 @@
-# Main app, include fastapi routers ...
+"""
+Main application, include fastapi routers and configurate it
+"""
+
 import tracemalloc
 from contextlib import asynccontextmanager
 

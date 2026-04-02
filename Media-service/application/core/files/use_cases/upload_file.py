@@ -46,7 +46,38 @@ class UploadFileUseCase:
                 f"[UploadFile] Начало загрузки файла: {data.unique_filename}, "
                 f"file_id: {data.file_id}, размер: {data.size} bytes"
             )
+            # Проверяем, включена ли outbox feature
+            if not settings.outbox.enabled:
+                logger.info(
+                    "[UploadFile] Outbox отключен, пропускаем этап сохранения в outbox"
+                )
 
+                # Шаг 1: Загрузка в S3
+                await self.s3_client.put_object(
+                    file=data.file.file,
+                    key=data.s3_upload_key,
+                )
+                logger.info(
+                    f"[UploadFile] Файл загружен в S3: {data.unique_filename}, file_id: {data.file_id}"
+                )
+
+                # Шаг 2: Сохранение метаданных
+                s3_url = await self.s3_client.get_file_url(key=data.s3_upload_key)
+                file_meta = await self._save_meta(data=data, s3_url=s3_url)
+
+                # Шаг 3: Возврат результата
+                return FileUploadUCOutputDTO(
+                    upload_status=FilesOutboxStatusesEnum.SUCCESS.value,
+                    file_id=file_meta.file_id,
+                    size=file_meta.size,
+                    unique_filename=file_meta.filename,
+                    content_type=file_meta.content_type,
+                    category=file_meta.category,
+                )
+
+            logger.info(
+                "[UploadFile] Outbox включен, этап сохранения в outbox будет реализован"
+            )
             # Шаг 1: Загрузка в temp S3
             await self._temp_upload_s3(
                 file=data.file, s3_temp_upload_key=data.s3_temp_upload_key
@@ -185,53 +216,52 @@ class UploadFileUseCase:
                 detail=f"Произошла ошибка при создании метаданных файла: {str(e)}"
             ) from e
 
-    # async def upload_s3(
-    #     self,
-    #     file: UploadFile,
-    #     file_id: UUID,
-    #     upload_context: str,
-    #     upload_key: str,
-    # ):
+    async def _save_meta(self, data: FileUploadUCInputDTO, s3_url: str):
+        """При отключенной outbox feature сохраняет метаданные файла"""
+        try:
+            logger.info(
+                f"[UploadFile] Создание записи в БД: file_id: {data.file_id}, "
+                f"filename: {data.unique_filename}"
+            )
 
-    # #     try:
-    # #         if upload_context == NOTES_ATTACHMENT_NAME:
-    # #             await self.s3_client.upload_file(
-    # #                 file=file.file,
-    # #                 key=upload_key,
-    # #             )
-    # #         elif upload_context == USERS_AVATAR_NAME:
-    # #             await self.s3_client.upload_file(
-    # #                 file=file.file,
-    # #                 key=upload_key,
-    # #             )
-    # #         else:
-    # #             raise FilesUploadFailedError(
-    # #                 f"Unknown upload context: {upload_context}"
-    # #             )
-    # #     except Exception as e:
-    # #         logger.exception(f"Ошибка загрузки файла в постоянное хранилище S3: {e}")
-    # #         raise FilesUploadFailedError(
-    # #             detail=f"Failed to upload file {file_id} to permanent S3 storage"
-    # #         )
+            # Создание метаданных
+            file_metadata_in_db = await self.file_meta_repo.create_metadata(
+                file_id=data.file_id,
+                entity_id=data.entity_id,
+                upload_context=data.upload_context,
+                filename=data.unique_filename,
+                size=data.size,
+                content_type=data.content_type,
+                category=data.category,
+                s3_url=s3_url,
+            )
+            if not file_metadata_in_db:
+                logger.error(
+                    f"[UploadFile] Не удалось создать метаданные: file_id: {data.file_id}"
+                )
+                raise FilesUploadFailedError(
+                    detail="Не удалось сохранить метаданные в БД"
+                )
+            logger.info(
+                f"[UploadFile] Метаданные созданы: file_id: {data.file_id}, id: {file_metadata_in_db.id}"
+            )
 
-    # # async def get_file_url(self, s3_upload_key: str) -> str:
-    # #     try:
-    # #         file_url = await self.s3_client.get_file_url(key=s3_upload_key)
-    # #         return file_url
-    # #     except Exception as e:
-    # #         logger.exception(f"Ошибка получения URL файла: {e}")
-    # #         raise FilesUploadFailedError(
-    # #             detail=f"Failed to get file URL for {s3_upload_key}"
-    # #         )
-
-    # #     # async def finalize_upload_file(
-    # #     #     self,
-    # #     #     unigue_filename: str,
-    # #     #     upload_context: str,
-    # #     #     entity_id: int,
-    # #     # ):
-    # #     #     # Принятие результата обработки RabbitMQ сообщения
-    # #     #     # Перенос файла из временной папки в постоянную
-    # #     #     # Обновление записей в БД
-    # #     #     s3_upload_key = f"{upload_context}/{entity_id}/{unigue_filename}"
-    # #     #     s3_url = await s3_client.get_file_url(key=s3_upload_key)
+            await self.commiter.commit()
+            logger.info(
+                f"[UploadFile] Метаданные успешно сохранены: file_id: {data.file_id}"
+            )
+            return file_metadata_in_db
+        except BaseAPIException:
+            await self.commiter.rollback()
+            logger.error(
+                f"[UploadFile] Откат транзакции (BaseAPIException): file_id: {data.file_id}"
+            )
+            raise
+        except Exception as e:
+            await self.commiter.rollback()
+            logger.exception(
+                f"[UploadFile] Откат транзакции (Exception) file_id: {data.file_id}: {e}"
+            )
+            raise FilesUploadFailedError(
+                detail=f"Произошла ошибка при создании метаданных файла: {str(e)}"
+            ) from e

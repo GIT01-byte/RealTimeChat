@@ -27,6 +27,7 @@ class FileRepository:
         size: int,
         content_type: str,
         category: str,
+        s3_url: str | None = None,
     ) -> FilesMetadataOrm | None:
         try:
             existing_metadata = await self.session.scalar(
@@ -43,6 +44,7 @@ class FileRepository:
                 file_id=file_id,
                 entity_id=entity_id,
                 upload_context=upload_context,
+                s3_url=s3_url,
                 filename=filename,
                 size=size,
                 content_type=content_type,

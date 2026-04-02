@@ -1,11 +1,14 @@
-user root;
-worker_processes 1;
+worker_processes auto;
 
-events {}
+events {
+    worker_connections 1024;
+}
 
 http {
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
+    limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+    limit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;
 
     server {
         listen 80;
@@ -15,13 +18,19 @@ http {
         resolver 127.0.0.11 valid=30s ipv6=off;
 
         location / {
+            limit_req zone=one burst=5 nodelay;
+            limit_conn conn_limit_per_ip 15;
             set $frontend http://rt_chat-frontend:3000;
             proxy_pass $frontend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
         }
 
         # KrakenD API Gateway
         location /api-gateway/ {
             client_max_body_size 200M;
+            limit_req zone=one burst=10 nodelay;
+            limit_conn conn_limit_per_ip 15;
 
             proxy_pass http://rt_chat-krakend-gateway:8080/;
 
@@ -32,6 +41,7 @@ http {
 
         # WebSocket
         location /ws/ {
+            limit_conn conn_limit_per_ip 15;
             rewrite ^/ws/(.*)$ /$1 break;
             proxy_pass http://rt_chat-chat-api:8001;
 
