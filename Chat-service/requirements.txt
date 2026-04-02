@@ -10,3 +10,5 @@ alembic
 dishka
 orjson
 redis
+prometheus-fastapi-instrumentator
+prometheus_client

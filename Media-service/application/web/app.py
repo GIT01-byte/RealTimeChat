@@ -6,14 +6,19 @@ import tracemalloc
 from contextlib import asynccontextmanager
 
 from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from application.configs.settings import settings
 from application.di.container import file_api_container
-from application.utils.errors_handlers import register_errors_handlers
 from application.utils.logging import logger
+from application.utils.middlewares import (
+    register_dev_log_middleware,
+    register_errors_handlers,
+    register_prod_log_middleware,
+)
 from application.web.views import router as api_router
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
@@ -35,6 +40,10 @@ def create_app() -> FastAPI:
 
     origins = [
         "http://127.0.0.1",
+        "http://localhost",
+        "http://localhost:8001",
+        "http://127.0.0.1:5500",
+        "http://176.12.67.28",
     ]
 
     app.add_middleware(
@@ -45,20 +54,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Подключаем middleware для просмотра содержимого http запроса
-    @app.middleware("http")
-    async def log_requests(request: Request, call_next):
-        logger.info("\n----------- New request -----------")
-        logger.info(f"Request: {request.method} {request.url}")
-        logger.info(f"Headers: {request.headers}")
-        try:
-            body = await request.json()
-            logger.info(f"Body: {body}\n")
-        except Exception as e:
-            logger.warning(f"Could not decode JSON body: {e}\n")
-        response = await call_next(request)
-        return response
-
     # Инитиализируеум dishka
     setup_dishka(file_api_container, app)
 
@@ -68,11 +63,19 @@ def create_app() -> FastAPI:
     # Подключаем обработчики исключений
     register_errors_handlers(app)
 
+    # Подключаем логирование запросов в зависимости от режима запуска
+    if settings.app.mode == "PROD":
+        logger.info("Start prod logging middleware")
+        register_prod_log_middleware(app)
+    elif settings.app.mode == "DEV":
+        logger.info("Start dev logging middleware")
+        register_dev_log_middleware(app)
+    else:
+        logger.exception(f"[APP] Invalide app mode: {settings.app.mode}")
+        raise RuntimeError(f"[APP] Invalide app mode: {settings.app.mode}")
+
     # Подключаем prometheus метрики
     Instrumentator().instrument(app).expose(app)
-
-    # Подключаем админ панель
-    # setup_admin(app, db_manager.engine)
 
     return app
 

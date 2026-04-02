@@ -16,6 +16,7 @@ dishka = "^1.8.0"
 orjson = "^3.11.7"
 redis = "^7.3.0"
 python-multipart = "^0.0.22"
+prometheus-fastapi-instrumentator = "^7.1.0"
 
 [dependency-groups]
 dev = [
