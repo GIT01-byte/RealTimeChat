@@ -1,7 +1,19 @@
 import { ref } from 'vue'
 import axios from 'axios'
+import { showToast } from './useToast'
 
 const GW = import.meta.env.VITE_GW_URL
+
+// ───── Axios interceptor — перехватывает 429 везде ─────
+axios.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 429) {
+      showToast('Слишко много запросов. Подождите немного...', 'warning')
+    }
+    return Promise.reject(err)
+  }
+)
 
 const currentUser = ref(null)
 

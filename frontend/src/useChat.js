@@ -23,7 +23,7 @@ async function fetchUsers() {
 
 function startPolling() {
   stopPolling()
-  pollingTimer = setInterval(fetchUsers, 5000)
+  pollingTimer = setInterval(fetchUsers, 10000)
 }
 
 function stopPolling() {

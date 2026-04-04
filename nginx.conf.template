@@ -7,8 +7,11 @@ events {
 http {
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
-    limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+    limit_req_zone $binary_remote_addr zone=frontend:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
     limit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;
+    limit_req_status 429;
+    limit_conn_status 429;
 
     server {
         listen 80;
@@ -17,9 +20,17 @@ http {
 
         resolver 127.0.0.11 valid=30s ipv6=off;
 
+        # Статика — без rate limit
+        location /assets/ {
+            set $frontend http://rt_chat-frontend:3000;
+            proxy_pass $frontend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
         location / {
-            limit_req zone=one burst=5 nodelay;
-            limit_conn conn_limit_per_ip 15;
+            limit_req zone=frontend burst=20 nodelay;
+            limit_conn conn_limit_per_ip 20;
             set $frontend http://rt_chat-frontend:3000;
             proxy_pass $frontend;
             proxy_set_header Host $host;
@@ -29,8 +40,9 @@ http {
         # KrakenD API Gateway
         location /api-gateway/ {
             client_max_body_size 200M;
-            limit_req zone=one burst=10 nodelay;
-            limit_conn conn_limit_per_ip 15;
+
+            limit_req zone=api burst=30 nodelay;
+            limit_conn conn_limit_per_ip 20;
 
             proxy_pass http://rt_chat-krakend-gateway:8080/;
 

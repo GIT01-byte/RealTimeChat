@@ -1,11 +1,10 @@
 import time
 from typing import Callable
 
+from application.utils.logging import logger
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-
-from utils.logging import logger
 
 
 def register_errors_handlers(app: FastAPI) -> None:

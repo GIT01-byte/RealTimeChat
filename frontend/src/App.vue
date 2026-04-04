@@ -2,6 +2,7 @@
   <div class="app">
     <AuthScreen v-if="!isLoggedIn" @logged-in="onLoggedIn" />
     <ChatScreen v-else @logout="onLogout" />
+    <ToastList />
   </div>
 </template>
 
@@ -9,6 +10,7 @@
 import { ref, onMounted } from 'vue'
 import AuthScreen from './components/AuthScreen.vue'
 import ChatScreen from './components/ChatScreen.vue'
+import ToastList from './components/ToastList.vue'
 import { currentUser, fetchSelfInfo, getToken } from './useAuth'
 
 const isLoggedIn = ref(false)
