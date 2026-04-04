@@ -17,7 +17,6 @@ from application.web.views import router as api_router
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
@@ -33,7 +32,6 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        default_response_class=ORJSONResponse,
         lifespan=lifespan,
     )
 

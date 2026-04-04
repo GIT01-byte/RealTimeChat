@@ -9,7 +9,6 @@ from api import api_router
 from core.settings import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from utils.logging import logger
 from utils.middlewares import (
@@ -31,7 +30,6 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        default_response_class=ORJSONResponse,
         lifespan=lifespan,
     )
 

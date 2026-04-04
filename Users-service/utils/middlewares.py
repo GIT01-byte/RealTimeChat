@@ -2,7 +2,7 @@ import time
 from typing import Callable
 
 from fastapi import FastAPI, Request, Response, status
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from utils.logging import logger
@@ -14,7 +14,7 @@ def register_errors_handlers(app: FastAPI) -> None:
         request: Request,
         exc: ValidationError,
     ):
-        return ORJSONResponse(
+        return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "message": "Unhandled error",
