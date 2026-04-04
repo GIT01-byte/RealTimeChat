@@ -5,7 +5,7 @@ from application.repositories.files_outbox_repository import FilesOutboxReposito
 from application.utils.logging import logger
 
 
-class OutboxWorker:
+class OutboxProducerWorker:
     def __init__(
         self,
         outbox_repository: FilesOutboxRepository,
@@ -32,16 +32,20 @@ class OutboxWorker:
                 await self.commiter.commit()
 
                 logger.info(
-                    f"Успешно обработано сообщение из Outbox: ID {message.id}, Type {message.message_name}"
+                    f"[OutboxProducer] Успешно обработано сообщение из Outbox: ID {message.id}, Type {message.message_name}"
                 )
                 await self.commiter.commit()
 
             except Exception as e:
-                logger.exception(f"Ошибка при отправке сообщения {message.id}: {e}")
+                logger.exception(
+                    f"[OutboxProducer] Ошибка при отправке сообщения {message.id}: {e}"
+                )
                 await self.commiter.rollback()
 
         except Exception as e:
-            logger.exception(f"Необработанная ошибка в _process_messages: {e}")
+            logger.exception(
+                f"[OutboxProducer] Необработанная ошибка в _process_messages: {e}"
+            )
             await self.commiter.rollback()
 
     async def _publish_message(

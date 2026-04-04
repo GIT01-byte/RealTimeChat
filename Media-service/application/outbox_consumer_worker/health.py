@@ -6,16 +6,16 @@ from fastapi import FastAPI, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from application.di.container import file_processor_container
+from application.di.container import outbox_consumer_container
 from application.rabbitmq.consumer import RabbitMQConsumer
 from application.utils.logging import logger
 
 app = FastAPI(
-    title="File Process Worker Health Check",
+    title="Outbox Consumer Worker Health Check",
     version="1.0.0",
 )
 
-setup_dishka(file_processor_container, app)
+setup_dishka(outbox_consumer_container, app)
 
 
 async def check_database(session: AsyncSession) -> bool:

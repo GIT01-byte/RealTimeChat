@@ -11,7 +11,7 @@ from application.repositories.storage.s3.client import S3Client
 from application.utils.logging import logger
 
 
-class FileProcessorWorker:
+class OutboxConsumerWorker:
     def __init__(
         self,
         file_meta_repo: FileRepository,
@@ -45,13 +45,13 @@ class FileProcessorWorker:
                 or not s3_temp_upload_key
             ):
                 logger.warning(
-                    "[FileProcessor] Отсутствует body в сообщении или body не dict"
+                    "[OutboxConsumer] Отсутствует body в сообщении или body не dict"
                 )
                 return
 
             if status != "pending" or sender != "Media_Service":
                 logger.warning(
-                    "[FileProcessor] Некорректный статус или sender в сообщении"
+                    "[OutboxConsumer] Некорректный статус или sender в сообщении"
                 )
                 return
 
@@ -71,19 +71,19 @@ class FileProcessorWorker:
                 file_id=file_id, s3_url=s3_url
             )
             if not updated_meta:
-                logger.warning("[FileProcessor] Обновление метаданных не удалось")
+                logger.warning("[OutboxConsumer] Обновление метаданных не удалось")
                 return
 
             await self.commiter.commit()
             logger.info(
-                f"[FileProcessor] Файл обработан: ID({updated_meta.file_id!r}), статус({updated_meta.status!r}), S3-URL({updated_meta.s3_url!r})"
+                f"[OutboxConsumer] Файл обработан: ID({updated_meta.file_id!r}), статус({updated_meta.status!r}), S3-URL({updated_meta.s3_url!r})"
             )
         except BaseAPIException:
             await self.commiter.rollback()
             raise
         except Exception:
             await self.commiter.rollback()
-            logger.exception("[FileProcessor] Ошибка обработки")
+            logger.exception("[OutboxConsumer] Ошибка обработки")
             raise
 
     async def start(self):
@@ -93,5 +93,5 @@ class FileProcessorWorker:
             queue_name="file.upload.started",
             callback_func=self._process_file_message,
         )
-        logger.info("[FileProcessor] Worker запущен")
+        logger.info("[OutboxConsumer] Worker запущен")
         await asyncio.Future()

@@ -44,11 +44,11 @@ services:
     networks:
       - app-network
   
-  rt-chat-media-service-outbox_worker:
+  rt-chat-media-service-outbox_producer:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rt-chat-media-service-outbox_worker
+    container_name: rt-chat-media-service-outbox_producer
     environment:
       MEDIA_APP_MODE: ${MEDIA_APP_MODE}
       
@@ -81,16 +81,16 @@ services:
       driver: json-file
       options:
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
-    command: python -m application.outbox_worker
+    command: python -m application.outbox_producer_worker
     networks:
       - app-network
     restart: unless-stopped
   
-  rt-chat-media-service-file_processor:
+  rt-chat-media-service-outbox_consumer:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rt-chat-media-service-file_processor
+    container_name: rt-chat-media-service-outbox_consumer
     environment:
       MEDIA_APP_MODE: ${MEDIA_APP_MODE}
       
@@ -120,7 +120,7 @@ services:
       driver: json-file
       options:
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
-    command: python -m application.file_process_worker
+    command: python -m application.outbox_consumer_worker
     networks:
       - app-network
     restart: unless-stopped
@@ -158,9 +158,9 @@ services:
         condition: service_healthy
       rt-chat-rabbitmq:
         condition: service_healthy
-      rt-chat-media-service-outbox_worker:
+      rt-chat-media-service-outbox_producer:
         condition: service_started
-      rt-chat-media-service-file_processor:
+      rt-chat-media-service-outbox_consumer:
         condition: service_started
     logging:
       driver: json-file

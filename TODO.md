@@ -3,3 +3,6 @@
 Rate limiting по IP для подозрительных паттернов
 
 Fail2ban на повторяющиеся атаки с одного IP
+
+Users Service обновить архитектуру
+Logging middlewares логировать больше headers
