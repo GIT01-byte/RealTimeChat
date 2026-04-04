@@ -256,6 +256,19 @@
       ]
     },
     {
+      "endpoint": "/media_service/files/{file_uuid}/link/",
+      "method": "PATCH",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/media_service/files/{file_uuid}/link/",
+          "host": [
+            "http://rt_chat-media-api:8003"
+          ]
+        }
+      ]
+    },
+    {
       "endpoint": "/media_service/files/delete/{file_uuid}/",
       "method": "DELETE",
       "output_encoding": "no-op",

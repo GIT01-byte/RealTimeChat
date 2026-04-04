@@ -86,6 +86,8 @@ class FileMeatadataRead(FileMetadataBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    is_linked: bool
+    linked_at: datetime.datetime | None = None
     created_at_db: datetime.datetime
     updated_at_db: datetime.datetime
 

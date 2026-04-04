@@ -1,3 +1,4 @@
+import datetime
 from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka, inject
@@ -22,8 +23,10 @@ from application.exceptions.exceptions import (
     DeleteFileFailedError,
     EmptyFileError,
     FilesUploadFailedError,
+    LinkedFileFailedError,
     ViewFileFailedError,
 )
+from application.repositories.database.commiter import Commiter
 from application.repositories.files_repository import FileRepository
 from application.utils.logging import logger
 from application.web.views.v1.deps import FileUploadInputDTO
@@ -36,6 +39,7 @@ router = APIRouter(prefix=settings.api.v1.service, tags=["Media Service"])
 # | GET | /files/{file_uuid} | Получение метаданных о файле | Возвращает JSON: URL, размер, тип, дату загрузки |
 # | GET | /files/{file_uuid}/view | Прямая ссылка или редирект на файл | Позволяет просматривать файл в браузере |
 # | DELETE | /files/{file_uuid} | Удаление файла | Удаляет файл из S3 и запись из базы данных |
+LOG_PREFIX = "[MediaAPI]"
 
 
 @router.get("/health_check/")
@@ -50,27 +54,25 @@ async def upload_file(
     upload_file_uc: FromDishka[UploadFileUseCase],
     data: FileUploadInputDTO = Depends(),
 ):
+    filename = data.file.filename if data.file else "unknown"
+    logger.debug(
+        f"{LOG_PREFIX} POST /upload filename={filename!r} context={data.upload_context!r}"
+    )
     try:
         if not data.file or not data.file.size or not data.file.content_type:
             logger.warning(
-                f"Попытка загрузки пустого файла: {data.file.filename if data.file else 'unknown'}"
+                f"{LOG_PREFIX} Попытка загрузки пустого файла filename={filename!r}"
             )
             raise EmptyFileError
-
-        logger.info(
-            f"[Upload] Начало загрузки файла: {data.file.filename}, "
-            f"размер: {data.file.size} bytes, тип: {data.file.content_type}, "
-            f"контекст: {data.upload_context}"
-        )
 
         # Шаг 1: Обработка и валидация файла
         process_data = FileProcessUCInputDTO(
             file=data.file, upload_context=data.upload_context, entity_id=data.entity_id
         )
         process_file_output = await process_file_uc.execute(data=process_data)
-        logger.info(
-            f"[Upload] Файл обработан: {data.file.filename}, "
-            f"file_id: {process_file_output.file_id}, категория: {process_file_output.category}"
+        logger.debug(
+            f"{LOG_PREFIX} Файл обработан filename={filename!r} "
+            f"file_id={process_file_output.file_id} category={process_file_output.category!r}"
         )
 
         # Шаг 2: Загрузка в S3 и сохранение метаданных
@@ -89,8 +91,8 @@ async def upload_file(
         upload_file_output = await upload_file_uc.execute(data=upload_data)
 
         logger.info(
-            f"[Upload] Файл успешно загружен: {data.file.filename}, "
-            f"file_id: {upload_file_output.file_id}, статус: {upload_file_output.upload_status}"
+            f"{LOG_PREFIX} Файл загружен filename={filename!r} "
+            f"file_id={upload_file_output.file_id} status={upload_file_output.upload_status!r}"
         )
 
         return {
@@ -104,19 +106,11 @@ async def upload_file(
                 "category": upload_file_output.category,
             },
         }
-    except EmptyFileError:
-        logger.error(
-            f"[Upload] Пустой файл: {data.file.filename if data.file else 'unknown'}"
-        )
-        raise
-    except BaseAPIException as e:
-        logger.error(
-            f"[Upload] Ошибка при загрузке файла {data.file.filename if data.file else 'unknown'}: {e.detail}"
-        )
+    except BaseAPIException:
         raise
     except Exception as e:
         logger.exception(
-            f"[Upload] Неожиданная ошибка при загрузке файла {data.file.filename if data.file else 'unknown'}: {e}"
+            f"{LOG_PREFIX} Неожиданная ошибка при загрузке файла filename={filename!r}"
         )
         raise FilesUploadFailedError(detail=f"Unexpected error: {str(e)}") from e
 
@@ -127,37 +121,84 @@ async def get_file(
     session: FromDishka[AsyncSession],
     file_uuid: UUID,
 ):
+    logger.debug(f"{LOG_PREFIX} GET /files/{file_uuid}/")
     file_repo = FileRepository(session=session)
     try:
         file_db = await file_repo.get_files_metadata(file_uuid=file_uuid)
+        logger.debug(f"{LOG_PREFIX} Метаданные файла file_uuid={file_uuid} получены")
         return file_db
-
     except BaseAPIException:
         raise
     except Exception as e:
-        logger.exception(f"Ошибка при получении метаданных файла: {e}")
+        logger.exception(
+            f"{LOG_PREFIX} Неожиданная ошибка при получении метаданных file_uuid={file_uuid}"
+        )
         raise ViewFileFailedError from e
 
 
 @router.get("/files/{file_uuid}/view/")
 @inject
-async def view_file_urL(
+async def view_file_url(
     session: FromDishka[AsyncSession],
     file_uuid: UUID,
 ):
+    logger.debug(f"{LOG_PREFIX} GET /files/{file_uuid}/view/")
     file_meta_repo = FileRepository(session=session)
     try:
         file_db = await file_meta_repo.get_files_metadata(file_uuid=file_uuid)
 
         if not file_db or not file_db.s3_url:
+            logger.warning(f"{LOG_PREFIX} S3 URL отсутствует для file_uuid={file_uuid}")
             raise ViewFileFailedError(detail="S3 URL не найден")
 
+        logger.debug(f"{LOG_PREFIX} Редирект на S3 URL для file_uuid={file_uuid}")
         return Response(status_code=302, headers={"Location": file_db.s3_url})
     except BaseAPIException:
         raise
     except Exception as e:
-        logger.exception(f"Ошибка при получении ссылки на файл: {e}")
+        logger.exception(
+            f"{LOG_PREFIX} Неожиданная ошибка при получении ссылки file_uuid={file_uuid}"
+        )
         raise ViewFileFailedError from e
+
+
+@router.patch("/files/{file_uuid}/link/")
+@inject
+async def mark_as_linked(
+    session: FromDishka[AsyncSession],
+    commiter: FromDishka[Commiter],
+    file_uuid: UUID,
+):
+    logger.debug(f"{LOG_PREFIX} PATCH /files/{file_uuid}/link/")
+    file_meta_repo = FileRepository(session=session)
+    try:
+        linked_at = datetime.datetime.utcnow()
+        result = await file_meta_repo.mark_as_linked(
+            file_id=file_uuid, linked_at=linked_at
+        )
+
+        if not result:
+            await commiter.rollback()
+            logger.warning(
+                f"{LOG_PREFIX} Не удалось пометить файл file_uuid={file_uuid} как привязанный"
+            )
+            raise LinkedFileFailedError
+
+        await commiter.commit()
+        logger.info(f"{LOG_PREFIX} Файл file_uuid={file_uuid} помечен как привязанный")
+        return {
+            "ok": True,
+            "message": f"Файл {file_uuid} успешно помечен привязанным",
+        }
+    except BaseAPIException:
+        await commiter.rollback()
+        raise
+    except Exception as e:
+        await commiter.rollback()
+        logger.exception(
+            f"{LOG_PREFIX} Неожиданная ошибка при привязке файла file_uuid={file_uuid}"
+        )
+        raise LinkedFileFailedError from e
 
 
 @router.delete("/files/delete/{file_uuid}/")
@@ -166,22 +207,19 @@ async def delete_file(
     delete_file_uc: FromDishka[DeleteFileUseCase],
     file_uuid: UUID,
 ):
+    logger.debug(f"{LOG_PREFIX} DELETE /files/delete/{file_uuid}/")
     try:
-        logger.info(f"[API Delete] Начало удаления файла: file_uuid: {file_uuid}")
-
         await delete_file_uc.execute(file_id=file_uuid)
-
-        logger.info(f"[API Delete] Файл успешно удален: file_uuid: {file_uuid}")
+        logger.info(f"{LOG_PREFIX} Файл file_uuid={file_uuid} успешно удалён")
         return {
             "ok": True,
             "message": f"Файл {file_uuid} успешно удален",
         }
-    except BaseAPIException as e:
-        logger.error(f"[API Delete] Ошибка удаления файла {file_uuid}: {e.detail}")
+    except BaseAPIException:
         raise
     except Exception as e:
         logger.exception(
-            f"[API Delete] Неожиданная ошибка удаления файла {file_uuid}: {e}"
+            f"{LOG_PREFIX} Неожиданная ошибка при удалении файла file_uuid={file_uuid}"
         )
         raise DeleteFileFailedError(detail=f"Unexpected error: {str(e)}") from e
 

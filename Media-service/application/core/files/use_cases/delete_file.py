@@ -55,7 +55,6 @@ class DeleteFileUseCase:
                 f"[DeleteFile] Файл успешно удален: file_id: {file_obj.file_id}"
             )
             return file_id
-
         except BaseAPIException:
             raise
         except Exception as e:

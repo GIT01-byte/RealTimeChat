@@ -109,3 +109,10 @@ class ProcessFileFailedError(BaseAPIException):
         super().__init__(
             detail=detail, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+class LinkedFileFailedError(BaseAPIException):
+    def __init__(self, detail: str = "Error mark as linked file"):
+        super().__init__(
+            detail=detail, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID, uuid7
 
 from sqlalchemy import BigInteger, Integer, String
@@ -23,6 +24,9 @@ class FilesMetadataOrm(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False)
 
     status: Mapped[str] = mapped_column(String, default="created", nullable=False)
+
+    is_linked: Mapped[bool] = mapped_column(default=False, nullable=False)
+    linked_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     created_at_db: Mapped[created_at]
     updated_at_db: Mapped[updated_at]

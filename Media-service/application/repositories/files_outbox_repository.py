@@ -13,6 +13,8 @@ from application.repositories.database.models.files_outbox import (
 )
 from application.utils.logging import logger
 
+LOG_PREFIX = "[FilesOutboxRepository]"
+
 
 class FilesOutboxRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -24,7 +26,7 @@ class FilesOutboxRepository:
         body: dict[str, Any] | list[Any],
         traceparent: str | None = None,
     ) -> FilesOutboxOrm | None:
-        """Creates an outbox message in the database."""
+        logger.debug(f"{LOG_PREFIX} Создание outbox сообщения message_name={message_name!r}")
         try:
             new_message = FilesOutboxOrm(
                 message_name=message_name,
@@ -33,29 +35,39 @@ class FilesOutboxRepository:
                 traceparent=traceparent,
             )
             self.session.add(new_message)
+            logger.debug(f"{LOG_PREFIX} Outbox сообщение message_name={message_name!r} добавлено в сессию")
             return new_message
         except SQLAlchemyError as e:
-            logger.exception(f"Ошибка БД при создании outbox сообщения: {e}")
+            logger.exception(f"{LOG_PREFIX} Ошибка БД при создании outbox сообщения message_name={message_name!r}")
             raise RepositoryInternalError(
-                "Failed to create outbox message due to a database error."
-            ) from e
-        except Exception as e:
-            logger.exception(f"Неожиданная ошибка при создании outbox сообщения: {e}")
-            raise RepositoryInternalError(
-                "Failed to create outbox message due to an unexpected error."
+                "Не удалось создать outbox сообщение из-за ошибки базы данных."
             ) from e
 
-    async def get_one_pending_locked(self):
-        stmt = (
-            select(FilesOutboxOrm)
-            .where(FilesOutboxOrm.status == FilesOutboxStatusesEnum.PENDING.value)
-            .order_by(FilesOutboxOrm.created_at_db)
-            .limit(1)
-            .with_for_update(skip_locked=True)
-        )
-        result = await self.session.execute(stmt)
-        return result.scalars().one_or_none()
+    async def get_one_pending_locked(self) -> FilesOutboxOrm | None:
+        logger.debug(f"{LOG_PREFIX} Получение одного PENDING сообщения с блокировкой")
+        try:
+            stmt = (
+                select(FilesOutboxOrm)
+                .where(FilesOutboxOrm.status == FilesOutboxStatusesEnum.PENDING.value)
+                .order_by(FilesOutboxOrm.created_at_db)
+                .limit(1)
+                .with_for_update(skip_locked=True)
+            )
+            result = await self.session.execute(stmt)
+            message = result.scalars().one_or_none()
+            if message:
+                logger.debug(f"{LOG_PREFIX} Найдено PENDING сообщение id={message.id}")
+            else:
+                logger.debug(f"{LOG_PREFIX} PENDING сообщений не найдено")
+            return message
+        except SQLAlchemyError as e:
+            logger.exception(f"{LOG_PREFIX} Ошибка БД при получении PENDING сообщения")
+            raise RepositoryInternalError(
+                "Не удалось получить outbox сообщение из-за ошибки базы данных."
+            ) from e
 
-    async def mark_as_success(self, message: FilesOutboxOrm):
+    async def mark_as_success(self, message: FilesOutboxOrm) -> None:
+        logger.debug(f"{LOG_PREFIX} Отметка сообщения id={message.id} как SUCCESS")
         message.status = FilesOutboxStatusesEnum.SUCCESS.value
         self.session.add(message)
+        logger.debug(f"{LOG_PREFIX} Сообщение id={message.id} отмечено как SUCCESS")
