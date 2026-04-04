@@ -28,6 +28,15 @@ def register_dev_log_middleware(app: FastAPI) -> None:
     async def dev_log_middleware(request: Request, call_next: Callable):
         start = time.perf_counter()
         request_body = await request.body()  # Тело запроса
+        try:
+            # Пробуем декодировать тело запроса как JSON
+            request_body_decoded = request_body.decode("utf-8")
+        except UnicodeDecodeError as e:
+            logger.warning(f"Cannot decode request body to UTF-8: {e}")
+            request_body_decoded = str(request_body)
+        except Exception as e:
+            logger.warning(f"Unexpected error during request body decoding: {e}")
+            request_body_decoded = str(request_body)
 
         # Выполняем response
         response = await call_next(request)
@@ -44,7 +53,7 @@ def register_dev_log_middleware(app: FastAPI) -> None:
             f"Method: {request.method}\n"
             f"URL: {str(request.url)}\n"
             f"Headers: {request.headers}\n"
-            f"Body: {request_body.decode('utf-8')}\n\n"  # Декодируем байты в строку
+            f"Body: {request_body_decoded}\n\n"
             "--- Response ---\n"
             f"Status code: {response.status_code}\n"
             f"Headers: {dict(response.headers)}\n"
