@@ -82,9 +82,6 @@ async def send_message(
     current_user: UserData = Depends(get_current_user),
 ):
     logger.debug(f"send_message: message={message}, current_user={current_user}")
-    print(f"[TEST] message_media.video_files={message_media.video_files}")
-    print(f"[TEST] message_media.image_files={message_media.image_files}")
-    print(f"[TEST] message_media.audio_files={message_media.audio_files}")
     try:
         send_message_data = SendMessageInputDTO(
             sender_id=current_user.id,

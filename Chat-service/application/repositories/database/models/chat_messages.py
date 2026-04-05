@@ -1,12 +1,12 @@
 from uuid import UUID, uuid7
 
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
 from application.repositories.database.mixins.created_at_updated_at import (
     created_at,
 )
+from application.repositories.database.mixins.list_obj_uuids import list_obj_uuids
 from application.repositories.database.models.base import Base
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class ChatMessages(Base):
@@ -19,7 +19,11 @@ class ChatMessages(Base):
 
     text: Mapped[str] = mapped_column(String(4096), nullable=False)
 
+    videos: Mapped[list_obj_uuids]
+    images: Mapped[list_obj_uuids]
+    audios: Mapped[list_obj_uuids]
+
     created_at: Mapped[created_at]
 
     def __repr__(self) -> str:
-        return f"<ChatMessage(id={self.id}, uuid={self.uuid}, v={self.sender_id}, recipient_id={self.recipient_id}, text={self.text[:50]!r})>"
+        return f"<ChatMessage(id={self.id}, uuid={self.uuid}, sender_id={self.sender_id}, recipient_id={self.recipient_id}, text={self.text[:50]!r}, images={self.images}, videos={self.videos}, audios={self.audios})>"
