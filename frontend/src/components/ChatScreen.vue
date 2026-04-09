@@ -37,11 +37,11 @@ import {
 
 const router = useRouter()
 const wsConnected = ref(false)
-const isMobile = ref(window.innerWidth <= 600)
+const isMobile = ref(window.innerWidth <= 900)
 let ws = null
 
 function onResize() {
-  isMobile.value = window.innerWidth <= 600
+  isMobile.value = window.innerWidth <= 900
 }
 
 onMounted(async () => {
@@ -84,8 +84,8 @@ async function handleLogout() {
 
 <style scoped>
 .chat-screen {
-  width: 900px;
-  height: 580px;
+  width: min(900px, 100vw);
+  height: min(580px, 100dvh);
   background: #1c1f2e;
   border-radius: 16px;
   overflow: hidden;
@@ -93,12 +93,12 @@ async function handleLogout() {
   display: flex;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .chat-screen {
-    width: 100vw;
-    height: 100dvh;
     border-radius: 0;
     box-shadow: none;
+    width: 100vw;
+    height: 100dvh;
   }
 }
 </style>

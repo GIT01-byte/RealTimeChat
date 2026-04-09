@@ -359,6 +359,7 @@ async function send() {
   font-size: 14px;
   font-weight: 600;
   transition: opacity .2s;
+  flex-shrink: 0;
 }
 .btn:hover { opacity: .85; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
