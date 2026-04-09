@@ -265,7 +265,6 @@ services:
       rt_chat-media-rabbitmq:
         condition: service_healthy
     command: python -m application.outbox_producer_worker
-    restart: unless-stopped
     logging:
       driver: json-file
       options:
@@ -301,7 +300,6 @@ services:
       rt_chat-media-rabbitmq:
         condition: service_healthy
     command: python -m application.outbox_consumer_worker
-    restart: unless-stopped
     logging:
       driver: json-file
       options:
