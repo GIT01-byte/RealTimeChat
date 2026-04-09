@@ -1,29 +1,24 @@
 <template>
   <div class="app">
-    <AuthScreen v-if="!isLoggedIn" @logged-in="onLoggedIn" />
-    <ChatScreen v-else @logout="onLogout" />
+    <RouterView />
     <ToastList />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import AuthScreen from './components/AuthScreen.vue'
-import ChatScreen from './components/ChatScreen.vue'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import ToastList from './components/ToastList.vue'
-import { currentUser, fetchSelfInfo, getToken } from './useAuth'
+import { fetchSelfInfo, getToken } from './useAuth'
 
-const isLoggedIn = ref(false)
+const router = useRouter()
 
 onMounted(async () => {
   if (getToken()) {
     const ok = await fetchSelfInfo()
-    if (ok) isLoggedIn.value = true
+    if (!ok) router.push('/')
   }
 })
-
-function onLoggedIn() { isLoggedIn.value = true }
-function onLogout() { isLoggedIn.value = false }
 </script>
 
 <style>
@@ -36,6 +31,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+@media (max-width: 600px) {
+  body {
+    align-items: flex-start;
+    height: 100dvh;
+  }
 }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

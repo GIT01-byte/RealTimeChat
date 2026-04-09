@@ -28,6 +28,9 @@ class SendMessageUseCase:
                 message_id=db_message.id,
                 sender_id=db_message.sender_id,
                 recipient_id=db_message.recipient_id,
+                images=db_message.images,
+                audios=db_message.audios,
+                videos=db_message.videos,
                 text=db_message.text,
             )
         except BaseAPIException:
@@ -42,6 +45,9 @@ class SendMessageUseCase:
                 sender_id=data.sender_id,
                 recipient_id=data.recipient_id,
                 text=data.text,
+                images=data.images,
+                audios=data.audios,
+                videos=data.videos,
             )
             await self.commiter.commit()
             return db_message

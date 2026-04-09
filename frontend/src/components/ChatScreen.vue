@@ -1,6 +1,8 @@
 <template>
   <div class="chat-screen">
+    <!-- На мобиле показываем либо сайдбар либо чат -->
     <Sidebar
+      v-show="!isMobile || !activeRecipient"
       :users="users"
       :users-online="usersOnline"
       :active-recipient="activeRecipient"
@@ -10,16 +12,20 @@
       @logout="handleLogout"
     />
     <ChatArea
+      v-show="!isMobile || activeRecipient"
       :messages="messages"
       :active-recipient="activeRecipient"
       :current-user="currentUser"
+      :is-mobile="isMobile"
       @send="handleSend"
+      @back="activeRecipient = null"
     />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import ChatArea from './ChatArea.vue'
 import { currentUser, logout } from '../useAuth'
@@ -29,27 +35,30 @@ import {
   openChat, sendMessage, connectWS, disconnectWS,
 } from '../useChat'
 
-const emit = defineEmits(['logout'])
+const router = useRouter()
 const wsConnected = ref(false)
+const isMobile = ref(window.innerWidth <= 600)
 let ws = null
 
+function onResize() {
+  isMobile.value = window.innerWidth <= 600
+}
+
 onMounted(async () => {
+  window.addEventListener('resize', onResize)
   await fetchUsers()
   startPolling()
   ws = connectWS(onIncomingMessage)
   ws.onopen = () => wsConnected.value = true
-  ws.onclose = () => {
-    wsConnected.value = false
-    // reconnect уже внутри connectWS
-  }
+  ws.onclose = () => { wsConnected.value = false }
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
   disconnectWS()
 })
 
 function onIncomingMessage(data) {
-  // Автопереход если пишет не текущий собеседник
   if (
     data.sender_id !== currentUser.value?.user_id &&
     (!activeRecipient.value || activeRecipient.value.id !== data.sender_id)
@@ -63,17 +72,13 @@ async function handleOpenChat(user) {
   await openChat(user)
 }
 
-async function handleSend(text) {
-  await sendMessage(text)
+async function handleSend({ text, fileUuids }) {
+  await sendMessage(text, fileUuids)
 }
 
 async function handleLogout() {
   disconnectWS()
-  try {
-    await logout()
-  } finally {
-    emit('logout')
-  }
+  try { await logout() } finally { router.push('/') }
 }
 </script>
 
@@ -86,5 +91,14 @@ async function handleLogout() {
   overflow: hidden;
   box-shadow: 0 8px 40px rgba(0,0,0,.5);
   display: flex;
+}
+
+@media (max-width: 600px) {
+  .chat-screen {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 </style>

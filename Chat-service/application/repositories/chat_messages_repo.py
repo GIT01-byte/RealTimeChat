@@ -1,10 +1,11 @@
-from sqlalchemy import and_, or_, select
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 
 from application.exceptions.exceptions import RepositoryInternalError
 from application.repositories.database.models.chat_messages import ChatMessages
 from application.utils.logging import logger
+from sqlalchemy import and_, or_, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ChatMessagesRepo:
@@ -16,12 +17,18 @@ class ChatMessagesRepo:
         sender_id: int,
         recipient_id: int,
         text: str,
+        images: List[str] | None,
+        audios: List[str] | None,
+        videos: List[str] | None,
     ) -> ChatMessages:
         try:
             new_message = ChatMessages(
                 sender_id=sender_id,
                 recipient_id=recipient_id,
                 text=text,
+                images=images,
+                audios=audios,
+                videos=videos,
             )
             self.session.add(new_message)
             return new_message

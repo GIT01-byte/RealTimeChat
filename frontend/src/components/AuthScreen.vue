@@ -39,6 +39,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { login, register } from '../useAuth'
 
 // ───── Настройки приветствия ─────
@@ -46,8 +47,7 @@ const WELCOME_TEXT = 'Мессенджер для общения в реальн
 const WELCOME_STORAGE_KEY = 'rt_chat_welcome_shown'
 // ─────────────────────────────────
 
-const emit = defineEmits(['logged-in'])
-
+const router = useRouter()
 const tab = ref('login')
 const username = ref('')
 const password = ref('')
@@ -71,7 +71,7 @@ async function handleLogin() {
   loading.value = true
   try {
     await login(username.value, password.value)
-    emit('logged-in')
+    router.push('/chat')
   } catch (e) {
     error.value = e.response?.data?.detail || 'Ошибка входа'
   } finally { loading.value = false }
@@ -82,7 +82,7 @@ async function handleRegister() {
   loading.value = true
   try {
     await register(username.value, password.value)
-    emit('logged-in')
+    router.push('/chat')
   } catch (e) {
     error.value = e.response?.data?.detail || 'Ошибка регистрации'
   } finally { loading.value = false }
@@ -90,7 +90,18 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.auth-screen { width: 360px; }
+.auth-screen {
+  width: 360px;
+  padding: 24px;
+}
+
+@media (max-width: 600px) {
+  .auth-screen {
+    width: 100vw;
+    min-height: 100dvh;
+    padding: 32px 20px;
+  }
+}
 
 /* ───── Welcome ───── */
 .welcome {

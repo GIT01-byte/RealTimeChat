@@ -40,11 +40,15 @@ async function loadHistory(userId) {
   } catch {}
 }
 
-async function sendMessage(text) {
-  if (!text || !activeRecipient.value) return
+async function sendMessage(text, fileUuids = { images: [], videos: [], audios: [] }) {
+  if (!text && !fileUuids.images.length && !fileUuids.videos.length && !fileUuids.audios.length) return
+  if (!activeRecipient.value) return
   await axios.post(`${GW}/chat/messages`, {
     recipient_id: activeRecipient.value.id,
-    text,
+    text: text || '',
+    images: fileUuids.images,
+    videos: fileUuids.videos,
+    audios: fileUuids.audios,
   }, { headers: { ...authHeaders(), 'Content-Type': 'application/json' } })
 }
 

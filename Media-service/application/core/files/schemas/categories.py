@@ -19,7 +19,6 @@ MESSAGE_VIDEOS = FileCategory(
     content_types=(
         "video/mp4",
         "video/mpeg",
-        "video/avi",
         "video/x-msvideo",
         "video/quicktime",
         "video/x-ms-wmv",

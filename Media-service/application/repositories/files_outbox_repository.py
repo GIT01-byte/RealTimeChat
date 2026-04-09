@@ -26,7 +26,9 @@ class FilesOutboxRepository:
         body: dict[str, Any] | list[Any],
         traceparent: str | None = None,
     ) -> FilesOutboxOrm | None:
-        logger.debug(f"{LOG_PREFIX} Создание outbox сообщения message_name={message_name!r}")
+        logger.debug(
+            f"{LOG_PREFIX} Создание outbox сообщения message_name={message_name!r}"
+        )
         try:
             new_message = FilesOutboxOrm(
                 message_name=message_name,
@@ -35,10 +37,14 @@ class FilesOutboxRepository:
                 traceparent=traceparent,
             )
             self.session.add(new_message)
-            logger.debug(f"{LOG_PREFIX} Outbox сообщение message_name={message_name!r} добавлено в сессию")
+            logger.debug(
+                f"{LOG_PREFIX} Outbox сообщение message_name={message_name!r} добавлено в сессию"
+            )
             return new_message
         except SQLAlchemyError as e:
-            logger.exception(f"{LOG_PREFIX} Ошибка БД при создании outbox сообщения message_name={message_name!r}")
+            logger.exception(
+                f"{LOG_PREFIX} Ошибка БД при создании outbox сообщения message_name={message_name!r}"
+            )
             raise RepositoryInternalError(
                 "Не удалось создать outbox сообщение из-за ошибки базы данных."
             ) from e

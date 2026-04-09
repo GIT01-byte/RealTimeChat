@@ -19,7 +19,7 @@ from application.integrations.users.auth import get_current_user, get_users
 from application.integrations.users.schemas import UserData
 from application.repositories.chat_messages_repo import ChatMessagesRepo
 from application.utils.logging import logger
-from dishka.integrations.fastapi import FromDishka, inject
+from dishka.integrations.fastapi import FromDishka, inject  # type: ignore
 from fastapi import (
     APIRouter,
     Body,
@@ -87,6 +87,9 @@ async def send_message(
             sender_id=current_user.id,
             recipient_id=message.recipient_id,
             text=message.text,
+            images=message.images,
+            audios=message.audios,
+            videos=message.videos,
         )
         send_message_output = await send_message_uc.execute(data=send_message_data)
 
@@ -95,6 +98,9 @@ async def send_message(
             "sender_id": send_message_output.sender_id,
             "recipient_id": send_message_output.recipient_id,
             "text": send_message_output.text,
+            "images": send_message_output.images,
+            "audios": send_message_output.audios,
+            "videos": send_message_output.videos,
         }
 
         # Уведомляем получателя и отправителя через WebSocket
@@ -104,6 +110,9 @@ async def send_message(
         return {
             "recipient_id": send_message_output.recipient_id,
             "text": send_message_output.text,
+            "images": send_message_output.images,
+            "audios": send_message_output.audios,
+            "videos": send_message_output.videos,
             "status": "ok",
             "msg": "Message saved!",
         }

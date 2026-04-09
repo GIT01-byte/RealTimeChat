@@ -63,5 +63,17 @@ http {
             proxy_set_header Host $host;
             proxy_read_timeout 3600s;
         }
+
+        # Блокировка скрытых файлов
+        location ~ /\. {
+            deny all;
+        }
+
+        # Блокировка конкретных расширений
+        location ~* \.(log|sql|ini|conf|env|git|bak|backup|swp|tmp|cache|pid|lock|key|pem|crt|csr|p12|pfx|db|sqlite|sqlite3|dump|tar|gz|zip|rar|7z|sh|bash|py|rb|php|asp|aspx|jsp|cfg|config|yaml|yml|toml|xml|json|csv|xls|xlsx)$ {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
     }
 }
