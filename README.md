@@ -73,7 +73,7 @@ cd RealTimeChat
 cp .env.template .env
 # Заполнить .env своими значениями
 
-# 3. Добавить пользователя в группу docker
+# 3. Добавить пользователя в группу docker (Linux)
 sudo usermod -aG docker $USER
 newgrp docker
 
