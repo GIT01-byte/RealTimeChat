@@ -54,7 +54,6 @@ class ProcessFileUseCase:
                 file=data.file,
                 upload_context=data.upload_context,
             )
-            print(f"File category: {category}")
             if not category:
                 logger.error(
                     f"[ProcessFile] Не удалось определить категорию: {data.file.filename}, file_id: {file_id}"

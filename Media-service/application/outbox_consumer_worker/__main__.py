@@ -1,7 +1,9 @@
 import asyncio
+import sys
 
 import uvicorn
 
+from application.configs.settings import settings
 from application.di.container import outbox_consumer_container
 from application.outbox_consumer_worker.worker import OutboxConsumerWorker
 from application.utils.logging import logger
@@ -42,6 +44,9 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    if not settings.outbox.enabled:
+        logger.info("Outbox consumer отключён (MEDIA_OUTBOX_ENABLED=False)")
+        sys.exit(0)
     try:
         asyncio.run(run_worker())
     except KeyboardInterrupt:

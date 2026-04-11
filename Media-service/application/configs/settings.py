@@ -94,6 +94,7 @@ if settings:
     print(f"-------- {settings.app.name} --------")
     print(f"INFO:     Host-port: {settings.app.host}:{settings.app.port}")
     print(f"INFO:     Run mode: {settings.app.mode}")
+    print(f"INFO:     Outbox enabled: {settings.outbox.enabled}")
     print(f"INFO:     Database url: {settings.db.DB_URL_asyncpg}")
     print(f"INFO:     S3 url: {settings.s3.endpointurl}/{settings.s3.bucketname}")
     print(f"INFO:     RabbitMQ url: {settings.rabbitmq.RABBITMQ_URL}")

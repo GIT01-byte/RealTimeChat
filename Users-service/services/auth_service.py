@@ -566,6 +566,7 @@ class AuthService:
         return role_obj.rights
 
 
+# For dev usage
 if __name__ == "__main__":
 
     async def test_get_role_rights():

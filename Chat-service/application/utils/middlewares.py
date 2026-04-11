@@ -6,8 +6,23 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-HEADERS_DEV = {"content-type", "content-length", "user-agent", "origin", "upgrade", "x-forwarded-for", "x-request-id"}
-HEADERS_PROD = {"content-type", "content-length", "x-forwarded-for", "x-real-ip", "x-request-id"}
+HEADERS_DEV = {
+    "content-type",
+    "content-length",
+    "user-agent",
+    "origin",
+    "upgrade",
+    "x-forwarded-for",
+    "x-request-id",
+}
+HEADERS_PROD = {
+    "content-type",
+    "content-length",
+    "x-forwarded-for",
+    "x-real-ip",
+    "x-request-id",
+}
+
 
 def register_errors_handlers(app: FastAPI) -> None:
     @app.exception_handler(ValidationError)
@@ -39,13 +54,17 @@ def register_dev_log_middleware(app: FastAPI) -> None:
             logger.warning(f"Unexpected error during request body decoding: {e}")
             request_body_decoded = str(request_body)
 
-        request_headers = {k: v for k, v in request.headers.items() if k.lower() in HEADERS_DEV}
+        request_headers = {
+            k: v for k, v in request.headers.items() if k.lower() in HEADERS_DEV
+        }
         if "authorization" in request.headers:
-            request_headers["authorization"] = "present"
+            request_headers["authorization"] = "<mask>"
 
         # Выполняем response
         response = await call_next(request)
-        response_headers = {k: v for k, v in response.headers.items() if k.lower() in HEADERS_DEV}
+        response_headers = {
+            k: v for k, v in response.headers.items() if k.lower() in HEADERS_DEV
+        }
 
         # Чтение тела ответа response
         response_body = b""
@@ -83,11 +102,15 @@ def register_prod_log_middleware(app: FastAPI) -> None:
     @app.middleware("http")
     async def prod_log_middleware(request: Request, call_next: Callable):
         start = time.perf_counter()
-        request_headers = {k: v for k, v in request.headers.items() if k.lower() in HEADERS_PROD}
+        request_headers = {
+            k: v for k, v in request.headers.items() if k.lower() in HEADERS_PROD
+        }
 
         # Выполняем response
         response = await call_next(request)
-        response_headers = {k: v for k, v in response.headers.items() if k.lower() in HEADERS_PROD}
+        response_headers = {
+            k: v for k, v in response.headers.items() if k.lower() in HEADERS_PROD
+        }
 
         # Формируем строку
         end = time.perf_counter() - start
