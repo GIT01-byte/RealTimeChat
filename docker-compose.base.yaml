@@ -1,0 +1,260 @@
+services:
+  # Base config
+  # Service name                    Service role
+  # rt_chat-nginx-balancer	        Nginx
+  # rt_chat-krakend-gateway	        KrakenD
+  # rt_chat-chat-api	              Chat FastAPI
+  # rt_chat-chat-postgres	          БД чата
+  # rt_chat-chat-redis	            Redis чата
+  # rt_chat-users-api	              Users FastAPI
+  # rt_chat-users-postgres	        БД пользователей
+  # rt_chat-users-redis	            Redis пользователей
+  # rt_chat-media-api	              Media FastAPI
+  # rt_chat-media-postgres	        БД медиа
+  
+  # --- БАЛАНСИРОВЩИК (Nginx) ---
+  rt_chat-nginx:
+    image: nginx:stable-alpine
+    container_name: rt_chat-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - './nginx.conf.template:/etc/nginx/nginx.conf.template'
+      - "./Chat-service/template:/usr/share/nginx/html"
+      - "/etc/letsencrypt:/etc/letsencrypt"
+    depends_on:
+      - rt_chat-krakend-gateway
+      - rt_chat-chat-api
+      - rt_chat-users-api
+      - rt_chat-media-api
+      - rt_chat-frontend
+    environment:
+      - SERVER_NAME=${SERVER_NAME}
+    command: ["/bin/sh", "-c", "envsubst '${SERVER_NAME}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # --- API ШЛЮЗ (Krakend) ---
+  rt_chat-krakend-gateway:
+    image: devopsfaith/krakend:2.4.0
+    container_name: rt_chat-krakend-gateway
+    volumes:
+      - ./krakend.json:/etc/krakend/krakend.json
+    depends_on:
+      - rt_chat-chat-api
+      - rt_chat-users-api
+      - rt_chat-media-api
+    networks:
+      - app-network
+
+  # --- Frontend ---
+  rt_chat-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_GW_URL=http://${SERVER_NAME}/api-gateway
+        - VITE_WS_URL=ws://${SERVER_NAME}
+    container_name: rt_chat-frontend
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    networks:
+      - app-network
+
+  # --- Chat Service ---
+  rt_chat-chat-postgres:
+    image: postgres:17
+    command: -p 5432
+    container_name: rt_chat-chat-postgres
+    environment:
+      POSTGRES_DB: ${RTCHAT_DB_NAME}
+      POSTGRES_USER: ${RTCHAT_DB_USER}
+      POSTGRES_PASSWORD: ${RTCHAT_DB_PWD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 5432 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_rt_chat:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  rt_chat-chat-redis:
+    image: redis:8
+    container_name: rt_chat-chat-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - redis_data_chat:/data
+    command: redis-server --appendonly yes --appendfsync everysec
+    networks:
+      - app-network
+
+  rt_chat-chat-api:
+    build:
+      context: ./Chat-service
+      dockerfile: Dockerfile
+    ports:
+      - 8001:8001
+    container_name: rt_chat-chat-api
+    environment:
+      RTCHAT_APP_MODE: ${RTCHAT_APP_MODE}
+      RTCHAT_DB_HOST: rt_chat-chat-postgres
+      RTCHAT_DB_PORT: 5432
+      RTCHAT_DB_NAME: ${RTCHAT_DB_NAME}
+      RTCHAT_DB_USER: ${RTCHAT_DB_USER}
+      RTCHAT_DB_PWD: ${RTCHAT_DB_PWD}
+      RTCHAT_REDIS_HOST: rt_chat-chat-redis
+      RTCHAT_REDIS_PORT: 6379
+    depends_on:
+      rt_chat-chat-postgres:
+        condition: service_healthy
+      rt_chat-chat-redis:
+        condition: service_healthy
+    command: ["bash", "-c", "alembic upgrade head && python -m application.web"]
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - app-network
+
+  # --- Users Service ---
+  rt_chat-users-postgres:
+    image: postgres:17
+    command: -p 5433
+    container_name: rt_chat-users-postgres
+    environment:
+      POSTGRES_DB: ${USERS_DB_NAME}
+      POSTGRES_USER: ${USERS_DB_USER}
+      POSTGRES_PASSWORD: ${USERS_DB_PWD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 5433 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_users:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  rt_chat-users-redis:
+    image: redis:7-alpine
+    container_name: rt_chat-users-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - redis_data_users:/data
+    command: redis-server --port 6380 --appendonly yes --appendfsync everysec
+    networks:
+      - app-network
+
+  rt_chat-users-api:
+    build:
+      context: ./Users-service
+      dockerfile: dockerfile
+    ports:
+      - 8002:8002
+    container_name: rt_chat-users-api
+    environment:
+      USERS_APP_MODE: ${USERS_APP_MODE}
+      USERS_DB_HOST: rt_chat-users-postgres
+      USERS_DB_PORT: 5433
+      USERS_DB_NAME: ${USERS_DB_NAME}
+      USERS_DB_USER: ${USERS_DB_USER}
+      USERS_DB_PWD: ${USERS_DB_PWD}
+      USERS_REDIS_HOST: rt_chat-users-redis
+      USERS_REDIS_PORT: 6380
+    depends_on:
+      rt_chat-users-postgres:
+        condition: service_healthy
+      rt_chat-users-redis:
+        condition: service_healthy
+    command: ["bash", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8002"]
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - app-network
+
+  # --- Media Service ---
+  rt_chat-media-postgres:
+    image: postgres:17
+    command: -p 5434
+    container_name: rt_chat-media-postgres
+    environment:
+      POSTGRES_DB: ${MEDIA_DB_NAME}
+      POSTGRES_USER: ${MEDIA_DB_USER}
+      POSTGRES_PASSWORD: ${MEDIA_DB_PWD}
+    ports:
+      - "5434:5434"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 5434 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_media:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  rt_chat-media-api:
+    build:
+      context: ./Media-service
+      dockerfile: Dockerfile
+    container_name: rt_chat-media-api
+    ports:
+      - "8003:8003"
+    environment:
+      MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+
+      MEDIA_DB_HOST: rt_chat-media-postgres
+      MEDIA_DB_PORT: 5434
+      MEDIA_DB_NAME: ${MEDIA_DB_NAME}
+      MEDIA_DB_USER: ${MEDIA_DB_USER}
+      MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+
+      MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
+      MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
+      MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
+      MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+    depends_on:
+      rt_chat-media-postgres:
+        condition: service_healthy
+    command: ["bash", "-c", "alembic upgrade head && service clamav-daemon start && python -m application.web"]
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - app-network
+
+volumes:
+  postgres_data_rt_chat:
+  redis_data_chat:
+  postgres_data_users:
+  redis_data_users:
+  postgres_data_media:
+  rabbitmq_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

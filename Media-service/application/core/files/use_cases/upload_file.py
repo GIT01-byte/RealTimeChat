@@ -47,7 +47,7 @@ class UploadFileUseCase:
                 f"file_id: {data.file_id}, размер: {data.size} bytes"
             )
             # Проверяем, включена ли outbox feature
-            if not settings.outbox.enabled:
+            if not settings.outbox:
                 logger.info(
                     "[UploadFile] Outbox отключен, пропускаем этап сохранения в outbox"
                 )

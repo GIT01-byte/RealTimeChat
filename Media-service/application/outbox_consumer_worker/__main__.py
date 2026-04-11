@@ -44,8 +44,11 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    if not settings.outbox.enabled:
-        logger.info("Outbox consumer отключён (MEDIA_OUTBOX_ENABLED=False)")
+    if not settings.rabbitmq:
+        logger.info("RabbitMQ не настроен, outbox consumer отключён")
+        sys.exit(0)
+    if not settings.outbox:
+        logger.info("Outbox consumer отключён")
         sys.exit(0)
     try:
         asyncio.run(run_worker())

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -69,7 +70,6 @@ class RabbitMQSettings(BaseModel):
 
 
 class OutboxSettings(BaseModel):
-    enabled: bool = True
     poll_interval: float = 1.0
 
 
@@ -84,8 +84,8 @@ class Settings(BaseSettings):
     api: ApiPrefix = ApiPrefix()
     db: DatabaseSettings
     s3: S3Settings
-    rabbitmq: RabbitMQSettings
-    outbox: OutboxSettings
+    rabbitmq: Optional[RabbitMQSettings] = None
+    outbox: Optional[OutboxSettings] = None
 
 
 settings = Settings()  # type: ignore
@@ -94,10 +94,12 @@ if settings:
     print(f"-------- {settings.app.name} --------")
     print(f"INFO:     Host-port: {settings.app.host}:{settings.app.port}")
     print(f"INFO:     Run mode: {settings.app.mode}")
-    print(f"INFO:     Outbox enabled: {settings.outbox.enabled}")
     print(f"INFO:     Database url: {settings.db.DB_URL_asyncpg}")
     print(f"INFO:     S3 url: {settings.s3.endpointurl}/{settings.s3.bucketname}")
-    print(f"INFO:     RabbitMQ url: {settings.rabbitmq.RABBITMQ_URL}")
+    if settings.outbox:
+        print(f"INFO:     Outbox poll interval: {settings.outbox.poll_interval}")
+    if settings.rabbitmq:
+        print(f"INFO:     RabbitMQ url: {settings.rabbitmq.RABBITMQ_URL}")
     print("-------------------------------------")
     print()
 else:

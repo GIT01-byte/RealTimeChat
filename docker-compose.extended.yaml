@@ -1,4 +1,5 @@
 services:
+  # Extended config
   # Service name                    Service role
   # rt_chat-nginx-balancer	        Nginx
   # rt_chat-krakend-gateway	        KrakenD
@@ -10,9 +11,9 @@ services:
   # rt_chat-users-redis	            Redis пользователей
   # rt_chat-media-api	              Media FastAPI
   # rt_chat-media-postgres	        БД медиа
-  # rt_chat-media-rabbitmq	        RabbitMQ
-  # rt_chat-media-outbox_producer	    Outbox воркер
-  # rt_chat-media-file_processor	  File processor
+  # rt_chat-media-rabbitmq	        RabbitMQ (Ext)
+  # rt_chat-media-outbox_producer	  Outbox воркер (Ext)
+  # rt_chat-media-file_processor	  File processor (Ext)
   
   # --- БАЛАНСИРОВЩИК (Nginx) ---
   rt_chat-nginx:
@@ -244,20 +245,23 @@ services:
     container_name: rt_chat-media-outbox_producer
     environment:
       MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+
       MEDIA_DB_HOST: rt_chat-media-postgres
       MEDIA_DB_PORT: 5434
       MEDIA_DB_NAME: ${MEDIA_DB_NAME}
       MEDIA_DB_USER: ${MEDIA_DB_USER}
       MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+
       MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
       MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
       MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
       MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+
       MEDIA_RABBITMQ_HOST: rt_chat-media-rabbitmq
       MEDIA_RABBITMQ_PORT: 5672
       MEDIA_RABBITMQ_LOGIN: ${MEDIA_RABBITMQ_LOGIN}
       MEDIA_RABBITMQ_PASSWORD: ${MEDIA_RABBITMQ_PASSWORD}
-      MEDIA_OUTBOX_ENABLED: ${MEDIA_OUTBOX_ENABLED}
+
       MEDIA_OUTBOX_POLL_INTERVAL: ${MEDIA_OUTBOX_POLL_INTERVAL}
     depends_on:
       rt_chat-media-postgres:
@@ -279,20 +283,23 @@ services:
     container_name: rt_chat-media-outbox_consumer
     environment:
       MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+
       MEDIA_DB_HOST: rt_chat-media-postgres
       MEDIA_DB_PORT: 5434
       MEDIA_DB_NAME: ${MEDIA_DB_NAME}
       MEDIA_DB_USER: ${MEDIA_DB_USER}
       MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+
       MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
       MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
       MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
       MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+
       MEDIA_RABBITMQ_HOST: rt_chat-media-rabbitmq
       MEDIA_RABBITMQ_PORT: 5672
       MEDIA_RABBITMQ_LOGIN: ${MEDIA_RABBITMQ_LOGIN}
       MEDIA_RABBITMQ_PASSWORD: ${MEDIA_RABBITMQ_PASSWORD}
-      MEDIA_OUTBOX_ENABLED: ${MEDIA_OUTBOX_ENABLED}
+
       MEDIA_OUTBOX_POLL_INTERVAL: ${MEDIA_OUTBOX_POLL_INTERVAL}
     depends_on:
       rt_chat-media-postgres:
@@ -333,7 +340,6 @@ services:
       MEDIA_RABBITMQ_LOGIN: ${MEDIA_RABBITMQ_LOGIN}
       MEDIA_RABBITMQ_PASSWORD: ${MEDIA_RABBITMQ_PASSWORD}
 
-      MEDIA_OUTBOX_ENABLED: ${MEDIA_OUTBOX_ENABLED}
       MEDIA_OUTBOX_POLL_INTERVAL: ${MEDIA_OUTBOX_POLL_INTERVAL}
     depends_on:
       rt_chat-media-postgres:
