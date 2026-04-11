@@ -5,7 +5,6 @@ services:
   # rt_chat-krakend-gateway	        KrakenD
   # rt_chat-chat-api	              Chat FastAPI
   # rt_chat-chat-postgres	          БД чата
-  # rt_chat-chat-redis	            Redis чата
   # rt_chat-users-api	              Users FastAPI
   # rt_chat-users-postgres	        БД пользователей
   # rt_chat-users-redis	            Redis пользователей
@@ -84,21 +83,6 @@ services:
     networks:
       - app-network
 
-  rt_chat-chat-redis:
-    image: redis:8
-    container_name: rt_chat-chat-redis
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    volumes:
-      - redis_data_chat:/data
-    command: redis-server --appendonly yes --appendfsync everysec
-    networks:
-      - app-network
-
   rt_chat-chat-api:
     build:
       context: ./Chat-service
@@ -113,12 +97,8 @@ services:
       RTCHAT_DB_NAME: ${RTCHAT_DB_NAME}
       RTCHAT_DB_USER: ${RTCHAT_DB_USER}
       RTCHAT_DB_PWD: ${RTCHAT_DB_PWD}
-      RTCHAT_REDIS_HOST: rt_chat-chat-redis
-      RTCHAT_REDIS_PORT: 6379
     depends_on:
       rt_chat-chat-postgres:
-        condition: service_healthy
-      rt_chat-chat-redis:
         condition: service_healthy
     command: ["bash", "-c", "alembic upgrade head && python -m application.web"]
     logging:
