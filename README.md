@@ -1,6 +1,6 @@
 # 💬 RealTimeChat
 
-Мессенджер реального времени на основе WebSockets с регистрацией/аутентификацией и обмена медиафайлами.
+Мессенджер реального времени на основе WebSockets с регистрацией/аутентификацией и обменом медиафайлами.
 
 ## 🌐 Попробовать
 **http://176.12.67.28/**
@@ -25,23 +25,26 @@ Nginx (балансировщик, rate limiting)
     └── WebSocket (напрямую) → Chat-service
 ```
 
+---
+
 ## 🛠️ Стек
 
 | Слой | Технологии |
 |---|---|
-| Frontend | Vue 3 + Vite + Axios |
+| Frontend | Vue 3 + Vite + Vue Router 4 |
 | Backend | FastAPI + WebSockets + Dishka DI |
 | API Gateway | KrakenD |
 | БД | PostgreSQL + SQLAlchemy (async) + Alembic |
 | Кэш | Redis |
 | Очереди | RabbitMQ (Outbox pattern) |
 | Хранилище | S3 (Selectel) |
+| Антивирус | ClamAV |
 | Балансировщик | Nginx |
 | Контейнеризация | Docker + Docker Compose |
 
 ---
 
-## ✅ Преимущества
+## ✅ Возможности
 
 - **Микросервисная архитектура** — независимый деплой и масштабирование каждого сервиса
 - **WebSocket** — мгновенная доставка сообщений без polling
@@ -53,6 +56,24 @@ Nginx (балансировщик, rate limiting)
 - **Онлайн статусы** — отображение активных пользователей в реальном времени
 - **Поиск пользователей** — поиск по имени с debounce
 - **Медиафайлы** — загрузка изображений, видео, аудио через отдельный сервис
+- **Антивирусная проверка** — сканирование загружаемых файлов через ClamAV
+- **Адаптивный интерфейс** — поддержка мобильных устройств и планшетов
+
+---
+
+## 📁 Структура проекта
+
+```
+RealTimeChat/
+├── Chat-service/       — сообщения, WebSocket, онлайн статусы
+├── Users-service/      — регистрация, аутентификация, JWT
+├── Media-service/      — загрузка файлов, S3, Outbox, ClamAV
+├── frontend/           — Vue 3 SPA
+├── nginx.conf.template — конфиг балансировщика
+├── krakend.json        — конфиг API Gateway
+├── docker-compose.yaml — основная конфигурация
+└── .env.template       — шаблон переменных окружения
+```
 
 ---
 
@@ -86,35 +107,29 @@ docker compose up --build
 | Переменная | Описание |
 |---|---|
 | `SERVER_NAME` | IP или домен сервера |
+| `RTCHAT_APP_MODE` | Режим запуска Chat-service (`DEV` / `PROD`) |
 | `RTCHAT_DB_*` | Настройки БД Chat-service |
+| `RTCHAT_REDIS_*` | Настройки Redis Chat-service |
+| `USERS_APP_MODE` | Режим запуска Users-service (`DEV` / `PROD`) |
 | `USERS_DB_*` | Настройки БД Users-service |
+| `USERS_REDIS_*` | Настройки Redis Users-service |
+| `MEDIA_APP_MODE` | Режим запуска Media-service (`DEV` / `PROD`) |
 | `MEDIA_DB_*` | Настройки БД Media-service |
 | `MEDIA_S3_*` | Настройки S3 хранилища |
 | `MEDIA_RABBITMQ_*` | Настройки RabbitMQ |
+| `MEDIA_OUTBOX_ENABLED` | Включить Outbox воркеры (`True` / `False`) |
+| `MEDIA_OUTBOX_POLL_INTERVAL` | Интервал опроса Outbox в секундах |
 
 ---
 
-## 📋 TODO
+## 🔌 API
 
-### 🔒 Безопасность
-- [ ] Блокировать запросы к `.env`, `.git`, `.php` на уровне Nginx — `return 444`
-- [ ] Rate limiting по IP для подозрительных паттернов
-- [ ] Fail2ban на повторяющиеся атаки с одного IP
+| Сервис        | Порт | Описание         |
+|---------------|------|------------------|
+| Nginx         | 80   | Точка входа      |
+| KrakenD       | 8080 | API Gateway      |
+| Chat-service  | 8001 | REST + WebSocket |
+| Users-service | 8002 | Аутентификация   |
+| Media-service | 8003 | Загрузка файлов  |
 
-### 💬 Chat-service
-- [ ] Чат-группы — переделать модель `chat_rooms` и репозиторий
-- [ ] Кэш последних 100 сообщений через Redis
-- [ ] WebSocket — повторные соединения при разрыве
-- [ ] При разлогинивании помечать пользователя офлайн
-
-### 👤 Users-service
-- [ ] Обновить архитектуру сервиса
-- [ ] Расширить логирование headers в middleware
-
-### 🖼️ Media-service
-- [ ] Очистка осиротевших файлов (TTL для непривязанных)
-- [ ] Поддержка аватарок пользователей
-
-### ⚡ Производительность
-- [ ] Кэширование межсервисных запросов (авторизация в Chat-service)
-- [ ] Пагинация истории сообщений
+WebSocket подключение: `ws://{SERVER_NAME}/ws/api/v1/real_time_chat/ws/{user_id}`
