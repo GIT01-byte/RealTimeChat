@@ -159,7 +159,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
         active_connections[user_id] = websocket
         logger.info(f"Пользователь {user_id} подключился")
         while True:
-            await asyncio.sleep(1)
+            await asyncio.Future()
     except WebSocketDisconnect:
         active_connections.pop(user_id, None)
         logger.info(f"Пользователь {user_id} отключился")

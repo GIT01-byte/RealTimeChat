@@ -2,13 +2,13 @@
 Main application, include fastapi routers and configurate it
 """
 
-import tracemalloc
 from contextlib import asynccontextmanager
 
 from api import api_router
 from core.settings import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from integrations.http_client import close_http_client, init_http_client
 from prometheus_fastapi_instrumentator import Instrumentator
 from utils.logging import logger
 from utils.middlewares import (
@@ -18,14 +18,19 @@ from utils.middlewares import (
 )
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
-tracemalloc.start()
+if settings.app.mode == "DEV":
+    import tracemalloc
+
+    tracemalloc.start()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Запуск приложения...")
+    await init_http_client()
     yield
     logger.info("Выключение...")
+    await close_http_client()
 
 
 def create_app() -> FastAPI:

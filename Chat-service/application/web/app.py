@@ -2,11 +2,11 @@
 Main application, include fastapi routers and configurate it
 """
 
-import tracemalloc
 from contextlib import asynccontextmanager
 
 from application.configs.settings import settings
 from application.di.containers import chat_api_container
+from application.integrations.http_client import close_http_client, init_http_client
 from application.utils.logging import logger
 from application.utils.middlewares import (
     register_dev_log_middleware,
@@ -14,20 +14,25 @@ from application.utils.middlewares import (
     register_prod_log_middleware,
 )
 from application.web.views import router as api_router
-from dishka.integrations.fastapi import setup_dishka
+from dishka.integrations.fastapi import setup_dishka  # type: ignore
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
-tracemalloc.start()
+if settings.app.mode == "DEV":
+    import tracemalloc
+
+    tracemalloc.start()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Запуск приложения...")
+    await init_http_client()
     yield
     logger.info("Выключение...")
+    await close_http_client()
 
 
 def create_app() -> FastAPI:

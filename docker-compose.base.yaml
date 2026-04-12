@@ -10,6 +10,7 @@ services:
   # rt_chat-users-redis	            Redis пользователей
   # rt_chat-media-api	              Media FastAPI
   # rt_chat-media-postgres	        БД медиа
+  # rt_chat-media-clamav            Clamav сканер вирусов
   
   # --- БАЛАНСИРОВЩИК (Nginx) ---
   rt_chat-nginx:
@@ -182,8 +183,6 @@ services:
       POSTGRES_DB: ${MEDIA_DB_NAME}
       POSTGRES_USER: ${MEDIA_DB_USER}
       POSTGRES_PASSWORD: ${MEDIA_DB_PWD}
-    ports:
-      - "5434:5434"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p 5434 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -192,6 +191,14 @@ services:
     volumes:
       - postgres_data_media:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - app-network
+
+  rt_chat-media-clamav:
+    image: clamav/clamav:stable
+    container_name: rt_chat-media-clamav
+    volumes:
+    - ./Media-service/application/clamav_data:/var/lib/clamav  # ← базы сигнатур
     networks:
       - app-network
 
@@ -216,9 +223,11 @@ services:
       MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
       MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
     depends_on:
+      rt_chat-media-clamav:
+        condition: service_started
       rt_chat-media-postgres:
         condition: service_healthy
-    command: ["bash", "-c", "alembic upgrade head && service clamav-daemon start && python -m application.web"]
+    command: ["bash", "-c", "alembic upgrade head && python -m application.web"]
     logging:
       driver: json-file
       options:

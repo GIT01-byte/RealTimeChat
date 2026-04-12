@@ -19,7 +19,7 @@ class ScanResult(BaseModel):
 class ClamavVirusScanner:
     def __init__(self):
         try:
-            self.cd = pyclamd.ClamdUnixSocket()
+            self.cd = pyclamd.ClamdNetworkSocket(host="rt_chat-media-clamav", port=3310)
             self.cd.ping()
         except Exception as e:
             logger.error(f"Не удалось подключиться к ClamAV: {e}")

@@ -14,6 +14,7 @@ services:
   # rt_chat-media-rabbitmq	        RabbitMQ (Ext)
   # rt_chat-media-outbox_producer	  Outbox воркер (Ext)
   # rt_chat-media-file_processor	  File processor (Ext)
+  # rt_chat-media-clamav            Clamav сканер вирусов
   
   # --- БАЛАНСИРОВЩИК (Nginx) ---
   rt_chat-nginx:
@@ -238,6 +239,14 @@ services:
     networks:
       - app-network
 
+  rt_chat-media-clamav:
+    image: clamav/clamav:stable
+    container_name: rt_chat-media-clamav
+    volumes:
+    - ./Media-service/application/clamav_data:/var/lib/clamav  # ← базы сигнатур
+    networks:
+      - app-network
+
   rt_chat-media-outbox_producer:
     build:
       context: ./Media-service
@@ -346,11 +355,13 @@ services:
         condition: service_healthy
       rt_chat-media-rabbitmq:
         condition: service_healthy
+      rt_chat-media-clamav:
+        condition: service_started
       rt_chat-media-outbox_producer:
         condition: service_started
       rt_chat-media-outbox_consumer:
         condition: service_started
-    command: ["bash", "-c", "alembic upgrade head && service clamav-daemon start && python -m application.web"]
+    command: ["bash", "-c", "alembic upgrade head && python -m application.web"]
     logging:
       driver: json-file
       options:

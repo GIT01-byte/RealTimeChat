@@ -2,7 +2,6 @@
 Main application, include fastapi routers and configurate it
 """
 
-import tracemalloc
 from contextlib import asynccontextmanager
 
 from dishka.integrations.fastapi import setup_dishka
@@ -21,7 +20,10 @@ from application.utils.middlewares import (
 from application.web.views import router as api_router
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
-tracemalloc.start()
+if settings.app.mode == "DEV":
+    import tracemalloc
+
+    tracemalloc.start()
 
 
 @asynccontextmanager
