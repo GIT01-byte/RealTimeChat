@@ -122,6 +122,41 @@ docker compose up --build
 
 ---
 
+## 🐳 Конфигурации запуска
+
+Проект поддерживает две конфигурации Docker Compose, выбор осуществляется через переменную `COMPOSE_FILE` в `.env`:
+
+### Base (`docker-compose.base.yaml`)
+Минимальная конфигурация без Outbox pattern и Redis для Chat-service.
+
+Состав:
+- Nginx, KrakenD, Frontend
+- Chat-service + PostgreSQL
+- Users-service + PostgreSQL + Redis
+- Media-service + PostgreSQL + ClamAV
+
+Подходит для: ограниченных ресурсов, когда гарантированная доставка файлов через очередь не требуется.
+
+```env
+COMPOSE_FILE=docker-compose.base.yaml
+```
+
+### Extended (`docker-compose.extended.yaml`)
+Полная конфигурация с Outbox pattern, RabbitMQ и Redis для Chat-service.
+
+Дополнительно к base:
+- RabbitMQ
+- Outbox producer воркер
+- Outbox consumer воркер
+
+Подходит для: production, когда важна гарантированная доставка медиафайлов через очередь.
+
+```env
+COMPOSE_FILE=docker-compose.extended.yaml
+```
+
+---
+
 ## 🔌 API
 
 | Сервис        | Порт | Описание         |
