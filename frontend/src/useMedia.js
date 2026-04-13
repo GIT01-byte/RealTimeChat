@@ -35,14 +35,18 @@ async function linkFile(uuid) {
   })
 }
 
-// Загрузить несколько файлов, вернуть список uuid
+// Загрузить несколько файлов, вернуть { uuids, failed } — успешные и неудачные
 async function uploadFiles(files, uploadContext = 'chat_message_files') {
+  const results = await Promise.allSettled(
+    files.map(file => uploadFile(file, uploadContext))
+  )
   const uuids = []
-  for (const file of files) {
-    const uuid = await uploadFile(file, uploadContext)
-    uuids.push(uuid)
-  }
-  return uuids
+  let failed = 0
+  results.forEach(r => {
+    if (r.status === 'fulfilled') uuids.push(r.value)
+    else failed++
+  })
+  return { uuids, failed }
 }
 
 // Получить s3_url для списка uuid

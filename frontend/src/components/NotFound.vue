@@ -30,7 +30,10 @@ function goHome() {
 .code {
   font-size: 96px;
   font-weight: 700;
-  color: #7c6af7;
+  background: linear-gradient(135deg, #7c6af7, #a89af9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   line-height: 1;
 }
 

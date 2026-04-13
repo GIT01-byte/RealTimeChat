@@ -109,11 +109,35 @@ function selectUser(u) {
 <style scoped>
 .sidebar {
   width: 240px;
-  background: #161824;
+  min-width: 240px;
+  background: #13162a;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #2a2d3a;
+  border-right: 1px solid rgba(124,106,247,.12);
   position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100vw;
+    min-width: 0;
+    border-right: none;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .sidebar-footer {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
 }
 
 .sidebar-header {
@@ -121,10 +145,11 @@ function selectUser(u) {
   font-size: 13px;
   font-weight: 700;
   color: #7c6af7;
-  border-bottom: 1px solid #2a2d3a;
+  border-bottom: 1px solid rgba(124,106,247,.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  letter-spacing: .3px;
 }
 
 .header-right { display: flex; align-items: center; gap: 8px; }
@@ -178,7 +203,10 @@ function selectUser(u) {
   transition: background .15s;
 }
 .user-item:hover { background: #2a2d3a; }
-.user-item.active { background: #2e2b4a; color: #7c6af7; }
+.user-item.active {
+  background: linear-gradient(90deg, rgba(124,106,247,.18), rgba(124,106,247,.08));
+  color: #a89af9;
+}
 
 .online-dot {
   width: 8px; height: 8px;
@@ -200,12 +228,13 @@ function selectUser(u) {
 
 .sidebar-footer {
   padding: 12px 16px;
-  border-top: 1px solid #2a2d3a;
+  border-top: 1px solid rgba(124,106,247,.12);
   font-size: 12px;
   color: #666;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: rgba(0,0,0,.15);
 }
 
 .me-name { color: #aaa; font-weight: 600; }

@@ -26,17 +26,18 @@ onMounted(async () => {
 body {
   font-family: 'Segoe UI', sans-serif;
   background: #0f1117;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(124, 106, 247, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(124, 106, 247, 0.05) 0%, transparent 50%);
   color: #e0e0e0;
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
-@media (max-width: 600px) {
-  body {
-    align-items: flex-start;
-    height: 100dvh;
-  }
+@media (max-width: 900px) {
+  body { align-items: flex-start; }
 }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

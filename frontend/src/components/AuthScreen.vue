@@ -92,7 +92,10 @@ async function handleRegister() {
 <style scoped>
 .auth-screen {
   width: 360px;
-  padding: 24px;
+  padding: 32px;
+  background: #1c1f2e;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(124,106,247,.1);
 }
 
 @media (max-width: 600px) {
@@ -100,6 +103,8 @@ async function handleRegister() {
     width: 100vw;
     min-height: 100dvh;
     padding: 32px 20px;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 

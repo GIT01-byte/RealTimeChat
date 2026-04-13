@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ChatMessageCreate(BaseModel):
     recipient_id: int = Field(ge=0)
-    text: str = Field(min_length=1, max_length=4096)
+    text: str = Field(max_length=4096)
     videos: List[str] = Field(default_factory=list)
     images: List[str] = Field(default_factory=list)
     audios: List[str] = Field(default_factory=list)

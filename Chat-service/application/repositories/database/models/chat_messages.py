@@ -17,7 +17,7 @@ class ChatMessages(Base):
     sender_id: Mapped[int] = mapped_column(nullable=False)
     recipient_id: Mapped[int] = mapped_column(nullable=False)
 
-    text: Mapped[str] = mapped_column(String(4096), nullable=False)
+    text: Mapped[str] = mapped_column(String(4096), nullable=True)
 
     videos: Mapped[list_obj_uuids]
     images: Mapped[list_obj_uuids]
