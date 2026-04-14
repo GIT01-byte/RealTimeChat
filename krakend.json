@@ -249,7 +249,7 @@
       "endpoint": "/media_service/upload",
       "method": "POST",
       "input_query_strings": ["upload_context", "entity_id"],
-      "input_headers": ["Content-Type"],
+      "input_headers": ["Content-Type", "Authorization"],
       "timeout": "10s",
       "output_encoding": "no-op",
       "backend": [
