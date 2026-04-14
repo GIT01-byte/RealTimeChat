@@ -15,7 +15,9 @@
       "allow_credentials": true,
       "allow_origins": [
         "http://{{ env \"SERVER_NAME\" }}",
-        "https://{{ env \"SERVER_NAME\" }}"
+        "https://{{ env \"SERVER_NAME\" }}",
+        "http://176.12.67.28",
+        "https://176.12.67.28"
       ],
       "allow_methods": [
         "GET",
