@@ -1,12 +1,13 @@
 from typing import Annotated, Optional
-from uuid import UUID
 
 from core.db import UsersRepo
 from core.schemas.users import (
     RefreshRequest,
     TokenResponse,
     UserCreate,
+    UserRead,
     UserSelfInfo,
+    UserUpdate,
 )
 from exceptions.base import BaseAPIException
 from exceptions.exceptions import (
@@ -18,6 +19,7 @@ from exceptions.exceptions import (
     RegistrationFailedError,
     RepositoryInternalError,
     UserAlreadyExistsError,
+    UserNotFoundError,
 )
 from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
@@ -217,6 +219,74 @@ async def auth_user_check_self_info(
     return current_user
 
 
+# Обновленеи текущего пользователя
+@auth_usage.patch("/me/", response_model=UserRead)
+@async_timed_report()
+async def update_current_user(
+    data: UserUpdate,
+    current_user: UserSelfInfo = Depends(get_current_active_user),
+):
+    """
+    Обновляет данные текущего пользователя.
+    Все поля необязательны — обновляются только переданные.
+    """
+    user_id = current_user.user_db.id
+    logger.info(
+        f"[API] PATCH /me/ user_id={user_id} data={data.model_dump(exclude_none=True)}"
+    )
+    try:
+        updated = await UsersRepo.update_user(
+            user_id=user_id,
+            username=data.username,
+            avatar=data.avatar,
+            profile=data.profile,
+        )
+        logger.info(f"[API] Пользователь ID={user_id} успешно обновлён")
+        return UserRead.model_validate(updated)
+    except (EntityNotFoundError, UserNotFoundError, UserAlreadyExistsError):
+        raise
+    except RepositoryInternalError:
+        raise
+    except Exception as e:
+        logger.exception(
+            f"[API] Неожиданная ошибка при обновлении пользователя ID={user_id}: {e}"
+        )
+        raise RepositoryInternalError("Не удалось обновить пользователя") from e
+
+
+# Удаление текущего пользователя
+@auth_usage.delete("/me/", status_code=204)
+@async_timed_report()
+async def delete_current_user(
+    response: Response,
+    current_user: UserSelfInfo = Depends(get_current_active_user),
+):
+    """
+    Удаляет аккаунт текущего пользователя и выполняет выход из системы.
+    """
+    user_id = current_user.user_db.id
+    logger.info(f"[API] DELETE /me/ user_id={user_id}")
+    try:
+        auth_service = AuthService()
+        await auth_service.loggout_user_logic(
+            response=response,
+            access_jti=current_user.jwt_payload.jti,
+            user_id=user_id,
+        )
+        await UsersRepo.delete_user(user_id=user_id)
+        logger.info(f"[API] Пользователь ID={user_id} удалён")
+    except (EntityNotFoundError, UserNotFoundError):
+        raise
+    except RepositoryInternalError:
+        raise
+    except Exception as e:
+        logger.exception(
+            f"[API] Неожиданная ошибка при удалении пользователя ID={user_id}: {e}"
+        )
+        raise RepositoryInternalError("Не удалось удалить пользователя") from e
+
+
+# Получение всех публичных пользователей
 @auth_usage.get("/get_all_users/")
 async def get_all_user():
     try:
@@ -228,6 +298,7 @@ async def get_all_user():
         raise RepositoryInternalError(detail="Failed to get users list")
 
 
+# Получение публичных пользователей по поисковому запросу
 @auth_usage.get("/search/")
 async def search_users_test(
     search: str,
@@ -244,11 +315,3 @@ async def search_users_test(
             f"Неожиданная ошибка при поиске пользователей по шаблону {search!r}"
         )
         raise RepositoryInternalError("Не удалось выполнить поиск пользователей") from e
-
-
-# Удаление текущего пользователя
-# @auth_usage.delete("/user/")
-# @async_timed_report()
-# async def delete_current_user(
-#     current_user=Depends(get_current_active_user),
-# ):

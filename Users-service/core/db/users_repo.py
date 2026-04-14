@@ -168,6 +168,110 @@ class UsersRepo:
             ) from e
 
     @staticmethod
+    async def update_user(
+        user_id: int,
+        username: str | None = None,
+        avatar: str | None = None,
+        profile: dict | None = None,
+    ) -> User:
+        """
+        Обновляет данные пользователя. Обновляются только переданные поля (partial update).
+
+        Args:
+            user_id: ID пользователя
+            username: Новое имя пользователя
+            avatar: UUID аватара в виде строки
+            profile: Дополнительные данные профиля
+
+        Returns:
+            User: Обновлённый объект пользователя
+
+        Raises:
+            EntityNotFoundError: Пользователь не найден
+            UserAlreadyExistsError: Имя уже занято
+            RepositoryInternalError: Ошибка БД
+        """
+        logger.debug(f"[UsersRepo] Обновление пользователя ID={user_id}")
+        try:
+            async with db_manager.session_factory() as session:
+                user = await session.scalar(select(User).where(User.id == user_id))
+                if not user:
+                    logger.warning(f"[UsersRepo] Пользователь ID={user_id} не найден")
+                    raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден")
+
+                if username is not None:
+                    existing = await session.scalar(
+                        select(User).where(
+                            User.username == username, User.id != user_id
+                        )
+                    )
+                    if existing:
+                        logger.warning(f"[UsersRepo] Имя {username!r} уже занято")
+                        raise UserAlreadyExistsError()
+                    user.username = username
+
+                if avatar is not None:
+                    user.avatar = avatar
+
+                if profile is not None:
+                    user.profile = profile
+
+                await session.commit()
+                await session.refresh(user)
+                logger.info(
+                    f"[UsersRepo] Пользователь ID={user_id} обновлён: "
+                    f"username={user.username!r}, avatar={user.avatar}"
+                )
+                return user
+        except (EntityNotFoundError, UserAlreadyExistsError):
+            raise
+        except SQLAlchemyError as e:
+            logger.exception(
+                f"[UsersRepo] Ошибка БД при обновлении пользователя ID={user_id}"
+            )
+            raise RepositoryInternalError("Не удалось обновить пользователя") from e
+        except Exception as e:
+            logger.exception(
+                f"[UsersRepo] Неожиданная ошибка при обновлении пользователя ID={user_id}"
+            )
+            raise RepositoryInternalError("Не удалось обновить пользователя") from e
+
+    @staticmethod
+    async def delete_user(user_id: int) -> None:
+        """
+        Удаляет пользователя из БД.
+
+        Args:
+            user_id: ID пользователя
+
+        Raises:
+            EntityNotFoundError: Пользователь не найден
+            RepositoryInternalError: Ошибка БД
+        """
+        logger.debug(f"[UsersRepo] Удаление пользователя ID={user_id}")
+        try:
+            async with db_manager.session_factory() as session:
+                user = await session.scalar(select(User).where(User.id == user_id))
+                if not user:
+                    logger.warning(f"[UsersRepo] Пользователь ID={user_id} не найден")
+                    raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден")
+                await session.delete(user)
+                await session.commit()
+                logger.info(f"[UsersRepo] Пользователь ID={user_id} удалён")
+        except EntityNotFoundError:
+            raise
+        except SQLAlchemyError as e:
+            logger.exception(
+                f"[UsersRepo] Ошибка БД при удалении пользователя ID={user_id}"
+            )
+            raise RepositoryInternalError("Не удалось удалить пользователя") from e
+        except Exception as e:
+            logger.exception(
+                f"[UsersRepo] Неожиданная ошибка при удалении пользователя ID={user_id}"
+            )
+            raise RepositoryInternalError("Не удалось удалить пользователя") from e
+
+    @staticmethod
     async def search_users(search_query: str) -> list[dict]:
         logger.debug(f"Попытка поиска пользователей по шаблону: {search_query!r}")
         try:

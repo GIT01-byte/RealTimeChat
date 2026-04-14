@@ -1,6 +1,5 @@
 <template>
   <div class="chat-screen">
-    <!-- На мобиле показываем либо сайдбар либо чат -->
     <Sidebar
       v-show="!isMobile || !activeRecipient"
       :users="users"
@@ -20,6 +19,8 @@
       @send="handleSend"
       @back="activeRecipient = null"
     />
+
+    <OnboardingGuide v-if="showOnboarding" @done="finishOnboarding" />
   </div>
 </template>
 
@@ -28,6 +29,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import ChatArea from './ChatArea.vue'
+import OnboardingGuide from './OnboardingGuide.vue'
 import { currentUser, logout } from '../useAuth'
 import {
   users, usersOnline, messages, activeRecipient,
@@ -35,13 +37,21 @@ import {
   openChat, sendMessage, connectWS, disconnectWS,
 } from '../useChat'
 
+const ONBOARDING_KEY = 'rt_chat_onboarding_done'
+
 const router = useRouter()
 const wsConnected = ref(false)
 const isMobile = ref(window.innerWidth <= 900 && window.innerHeight > window.innerWidth)
+const showOnboarding = ref(false)
 let ws = null
 
 function onResize() {
   isMobile.value = window.innerWidth <= 900 && window.innerHeight > window.innerWidth
+}
+
+function finishOnboarding() {
+  showOnboarding.value = false
+  localStorage.setItem(ONBOARDING_KEY, '1')
 }
 
 onMounted(async () => {
@@ -51,6 +61,10 @@ onMounted(async () => {
   ws = connectWS(onIncomingMessage)
   ws.onopen = () => wsConnected.value = true
   ws.onclose = () => { wsConnected.value = false }
+
+  if (!localStorage.getItem(ONBOARDING_KEY)) {
+    showOnboarding.value = true
+  }
 })
 
 onUnmounted(() => {

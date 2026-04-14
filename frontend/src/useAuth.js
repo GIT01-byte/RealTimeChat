@@ -68,13 +68,45 @@ async function login(username, password) {
   await fetchSelfInfo()
 }
 
-async function register(username, password, avatarUuid = null) {
+async function register(username, password, avatarFile = null) {
+  // 1. Регистрация без аватара
   const body = new FormData()
   body.append('username', username)
   body.append('password', password)
-  if (avatarUuid) body.append('avatar_uuid', avatarUuid)
-  const { data } = await axios.post(`${GW}/user/register/`, body)
-  await login(username, password, data.avatar_uuid || avatarUuid)
+  await axios.post(`${GW}/user/register/`, body)
+
+  // 2. Вход — получаем токены и user_id
+  await login(username, password)
+
+  // 3. Если есть файл — загружаем аватар с entity_id=user_id и обновляем профиль
+  if (avatarFile && currentUser.value) {
+    try {
+      const { uploadAvatar, linkFile } = await import('./useMedia')
+      const uuid = await uploadAvatar(avatarFile, currentUser.value.user_id)
+      await linkFile(uuid)
+      await updateUser({ avatar: uuid })
+    } catch {
+      // Аватар необязателен — продолжаем
+    }
+  }
+
+  // 4. Устанавливаем флаг для показа онбординга
+  localStorage.removeItem('rt_chat_onboarding_done')
+}
+
+async function updateUser(data) {
+  const { data: updated } = await axios.patch(`${GW}/user/me/`, data)
+  if (currentUser.value) {
+    if (updated.username) currentUser.value.username = updated.username
+    if (updated.avatar) currentUser.value.avatarUrl = avatarUrl(updated.avatar)
+  }
+  return updated
+}
+
+async function deleteUser() {
+  await axios.delete(`${GW}/user/me/`)
+  clearTokens()
+  currentUser.value = null
 }
 
 async function logout() {
@@ -86,4 +118,4 @@ async function logout() {
   }
 }
 
-export { GW, avatarUrl, currentUser, getToken, fetchSelfInfo, updateAvatar, login, register, logout }
+export { GW, avatarUrl, currentUser, getToken, fetchSelfInfo, updateAvatar, updateUser, deleteUser, login, register, logout }

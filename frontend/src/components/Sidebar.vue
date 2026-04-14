@@ -52,12 +52,13 @@
     <div class="sidebar-footer">
       <button class="btn btn-ghost btn-sm" @click="$emit('logout')">Выйти</button>
       <span class="me-name">{{ meName }}</span>
-      <label class="my-avatar" title="Сменить аватар">
-        <input type="file" accept="image/*" hidden @change="onAvatarChange" />
+      <div class="my-avatar" title="Профиль" @click="showProfile = true">
         <UserAvatar :url="currentUser?.avatarUrl" :username="meName" />
-        <div class="my-avatar-overlay">📷</div>
-      </label>
+        <div class="my-avatar-overlay">👤</div>
+      </div>
     </div>
+
+    <ProfileModal v-if="showProfile" @close="showProfile = false" />
   </div>
 </template>
 
@@ -66,9 +67,9 @@ import { ref, nextTick } from 'vue'
 import { searchUsers } from '../useChat'
 import { currentUser, updateAvatar, fetchSelfInfo } from '../useAuth'
 import { avatarUrl } from '../useAuth'
-import { uploadAvatar, linkFile } from '../useMedia'
 import { showToast } from '../useToast'
 import UserAvatar from './UserAvatar.vue'
+import ProfileModal from './ProfileModal.vue'
 
 const props = defineProps({
   users: Array,
@@ -83,21 +84,8 @@ const searchOpen = ref(false)
 const searchQuery = ref('')
 const searchResults = ref([])
 const searchInputRef = ref(null)
+const showProfile = ref(false)
 let searchTimer = null
-
-async function onAvatarChange(e) {
-  const file = e.target.files[0]
-  if (!file || !currentUser.value) return
-  e.target.value = ''
-  try {
-    const uuid = await uploadAvatar(file, currentUser.value.user_id)
-    await linkFile(uuid)
-    updateAvatar(uuid)
-    showToast('Аватар обновлён', 'success')
-  } catch {
-    showToast('Не удалось загрузить аватар', 'error')
-  }
-}
 
 async function toggleSearch() {
   searchOpen.value = !searchOpen.value

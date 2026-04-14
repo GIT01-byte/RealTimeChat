@@ -12,6 +12,12 @@ class UserCreate(BaseModel):
     profile: Any | None = None
 
 
+class UserUpdate(BaseModel):
+    username: str | None = None
+    avatar: str | None = None
+    profile: Any | None = None
+
+
 class UserRead(BaseModel):
     model_config = {"from_attributes": True}
 

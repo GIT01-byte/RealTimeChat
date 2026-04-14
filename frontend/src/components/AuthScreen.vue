@@ -50,7 +50,6 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { login, register } from '../useAuth'
-import { uploadAvatarAnon } from '../useMedia'
 
 const WELCOME_TEXT = 'Мессенджер для общения в реальном времени. Быстро, удобно, без лишнего.'
 const WELCOME_STORAGE_KEY = 'rt_chat_welcome_shown'
@@ -64,7 +63,6 @@ const loading = ref(false)
 const showWelcome = ref(false)
 const avatarFile = ref(null)
 const avatarPreview = ref(null)
-const avatarUuidCached = ref(null)
 
 function onAvatarPick(e) {
   const file = e.target.files[0]
@@ -72,7 +70,6 @@ function onAvatarPick(e) {
   if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value)
   avatarFile.value = file
   avatarPreview.value = URL.createObjectURL(file)
-  avatarUuidCached.value = null
 }
 
 onMounted(() => {
@@ -101,14 +98,7 @@ async function handleRegister() {
   error.value = ''
   loading.value = true
   try {
-    if (avatarFile.value && !avatarUuidCached.value) {
-      try {
-        avatarUuidCached.value = await uploadAvatarAnon(avatarFile.value)
-      } catch {
-        // Аватар не обязателен — продолжаем без него
-      }
-    }
-    await register(username.value, password.value, avatarUuidCached.value)
+    await register(username.value, password.value, avatarFile.value)
     router.push('/chat')
   } catch (e) {
     error.value = e.response?.data?.detail || 'Ошибка регистрации'

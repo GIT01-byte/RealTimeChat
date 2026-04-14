@@ -191,6 +191,34 @@
       ]
     },
     {
+      "endpoint": "/user/me/",
+      "method": "PATCH",
+      "input_headers": ["Authorization"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/users/me/",
+          "host": [
+            "http://rt_chat-users-api:8002"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user/me/",
+      "method": "DELETE",
+      "input_headers": ["Authorization"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/users/me/",
+          "host": [
+            "http://rt_chat-users-api:8002"
+          ]
+        }
+      ]
+    },
+    {
       "endpoint": "/user/get_all_users/",
       "method": "GET",
       "output_encoding": "no-op",
