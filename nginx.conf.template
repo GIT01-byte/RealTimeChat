@@ -60,6 +60,13 @@ http {
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Request-ID $request_id;
             proxy_set_header Origin $http_origin;
+
+            proxy_pass_header Access-Control-Allow-Origin;
+            proxy_pass_header Access-Control-Allow-Credentials;
+            proxy_pass_header Access-Control-Allow-Methods;
+            proxy_pass_header Access-Control-Allow-Headers;
+            proxy_pass_header Access-Control-Expose-Headers;
+
             add_header X-Request-ID $request_id always;
         }
 
