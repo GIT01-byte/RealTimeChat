@@ -207,3 +207,4 @@ security_keys/
 node_modules/
 .ruff_cache
 .amazonq
+Media-service\application\clamav_data\freshclam.dat
