@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { io } from 'socket.io-client'
 import axios from 'axios'
-import { GW, currentUser, authHeaders } from './useAuth'
+import { GW, currentUser } from './useAuth'
 
 const WS_URL = import.meta.env.VITE_WS_URL
 
@@ -15,7 +15,7 @@ let pollingTimer = null
 // ───── USERS ─────
 async function fetchUsers() {
   try {
-    const { data } = await axios.get(`${GW}/chat/`, { headers: authHeaders() })
+    const { data } = await axios.get(`${GW}/chat/`)
     users.value = (data.users_all || []).filter(u => u.id !== currentUser.value?.user_id)
     usersOnline.value = data.users_online || {}
   } catch {}
@@ -34,7 +34,7 @@ function stopPolling() {
 async function loadHistory(userId) {
   messages.value = []
   try {
-    const { data } = await axios.get(`${GW}/chat/messages/${userId}`, { headers: authHeaders() })
+    const { data } = await axios.get(`${GW}/chat/messages/${userId}`)
     const list = Array.isArray(data) ? data : (data.data || [])
     messages.value = list
   } catch {}
@@ -49,7 +49,7 @@ async function sendMessage(text, fileUuids = { images: [], videos: [], audios: [
     images: fileUuids.images,
     videos: fileUuids.videos,
     audios: fileUuids.audios,
-  }, { headers: { ...authHeaders(), 'Content-Type': 'application/json' } })
+  }, { headers: { 'Content-Type': 'application/json' } })
 }
 
 async function openChat(user) {

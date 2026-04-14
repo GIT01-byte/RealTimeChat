@@ -4,5 +4,5 @@ __all__ = (
     "RefreshTokensRepo",
 )
 from .db_manager import db_manager
-from .repositories import UsersRepo
-from .repositories import RefreshTokensRepo
+from .tokens_repo import RefreshTokensRepo
+from .users_repo import UsersRepo

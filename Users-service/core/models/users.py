@@ -1,6 +1,5 @@
 from datetime import datetime
-from typing import Any, List
-from uuid import UUID, uuid7
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -26,17 +25,6 @@ from .mixins import (
 )
 
 
-class FileBase:
-    uuid: Mapped[UUID] = mapped_column(unique=True, default=uuid7, index=True)
-    s3_url: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
-    category: Mapped[str] = mapped_column(String(100), nullable=False)
-    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
-
-    uploaded_at_s3: Mapped[str]
-    created_at: Mapped[created_at]
-    updated_at: Mapped[updated_at]
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -44,6 +32,7 @@ class User(Base):
 
     username: Mapped[str_64] = mapped_column(String, unique=True, nullable=False)
     hashed_password: Mapped[bytes] = mapped_column(nullable=False)
+    avatar: Mapped[str | None]
     profile: Mapped[Any | None] = mapped_column(JSON)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -55,17 +44,6 @@ class User(Base):
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-
-    avatar: Mapped[List["AvatarFiles"]] = relationship(
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-    )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not hasattr(self, "avatar") or self.avatar is None:
-            self.avatar = []
 
 
 class RefreshToken(Base):
@@ -81,14 +59,3 @@ class RefreshToken(Base):
     created_at: Mapped[created_at]
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
-
-
-class AvatarFiles(Base, FileBase):
-    __tablename__ = "avatar"
-
-    id: Mapped[intpk]
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-
-    user: Mapped["User"] = relationship(
-        back_populates="avatar",
-    )

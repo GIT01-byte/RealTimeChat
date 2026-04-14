@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { GW, currentUser, authHeaders } from './useAuth'
+import { GW, currentUser } from './useAuth'
 
 const MEDIA_GW = GW
 
@@ -12,11 +12,37 @@ async function uploadFile(file, uploadContext = 'chat_message_files') {
     `${MEDIA_GW}/media_service/upload`,
     form,
     {
-      headers: { ...authHeaders() },
       params: {
         upload_context: uploadContext,
         entity_id: currentUser.value?.user_id ?? 0,
       },
+    }
+  )
+  return data.file.uuid
+}
+
+// Загрузить аватар без авторизации (при регистрации)
+async function uploadAvatarAnon(file) {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await axios.post(
+    `${MEDIA_GW}/media_service/upload`,
+    form,
+    { params: { upload_context: 'users_avatars', entity_id: 0 } } //FIXME entity_id
+  )
+  return data.file.uuid
+}
+
+
+// Загрузить аватар пользователя (авторизованного)
+async function uploadAvatar(file, userId) {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await axios.post(
+    `${MEDIA_GW}/media_service/upload`,
+    form,
+    {
+      params: { upload_context: 'users_avatars', entity_id: userId },
     }
   )
   return data.file.uuid
@@ -30,9 +56,7 @@ async function getFileMeta(uuid) {
 
 // Привязать файл к сообщению
 async function linkFile(uuid) {
-  await axios.patch(`${MEDIA_GW}/media_service/files/${uuid}/link/`, {}, {
-    headers: authHeaders(),
-  })
+  await axios.patch(`${MEDIA_GW}/media_service/files/${uuid}/link/`, {})
 }
 
 // Загрузить несколько файлов, вернуть { uuids, failed } — успешные и неудачные
@@ -55,4 +79,4 @@ async function resolveFileUrls(uuids) {
   return results.filter(Boolean)
 }
 
-export { uploadFile, uploadFiles, getFileMeta, linkFile, resolveFileUrls }
+export { uploadFile, uploadFiles, uploadAvatar, uploadAvatarAnon, getFileMeta, linkFile, resolveFileUrls }

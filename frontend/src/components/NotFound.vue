@@ -9,12 +9,12 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { getToken } from '../useAuth'
+import { currentUser } from '../useAuth'
 
 const router = useRouter()
 
 function goHome() {
-  router.push(getToken() ? '/chat' : '/')
+  router.push(currentUser.value ? '/chat' : '/')
 }
 </script>
 

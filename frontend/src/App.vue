@@ -9,15 +9,13 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import ToastList from './components/ToastList.vue'
-import { fetchSelfInfo, getToken } from './useAuth'
+import { fetchSelfInfo } from './useAuth'
 
 const router = useRouter()
 
 onMounted(async () => {
-  if (getToken()) {
-    const ok = await fetchSelfInfo()
-    if (!ok) router.push('/')
-  }
+  const ok = await fetchSelfInfo()
+  if (!ok) router.push('/')
 })
 </script>
 

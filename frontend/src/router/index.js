@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '../useAuth'
+import { currentUser, fetchSelfInfo } from '../useAuth'
 
 const routes = [
   {
@@ -23,10 +23,10 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
-  const token = getToken()
-  if (to.meta.requiresAuth && !token) return '/'
-  if (to.meta.guestOnly && token) return '/chat'
+router.beforeEach(async (to) => {
+  if (!currentUser.value) await fetchSelfInfo()
+  if (to.meta.requiresAuth && !currentUser.value) return '/'
+  if (to.meta.guestOnly && currentUser.value) return '/chat'
 })
 
 export default router

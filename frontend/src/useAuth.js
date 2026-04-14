@@ -4,7 +4,31 @@ import { showToast } from './useToast'
 
 const GW = import.meta.env.VITE_GW_URL
 
-// ───── Axios interceptor — перехватывает 429 везде ─────
+axios.defaults.withCredentials = true
+
+function avatarUrl(uuid) {
+  if (!uuid) return null
+  return `${GW}/media_service/files/${uuid}/view/`
+}
+
+function getToken() { return localStorage.getItem('access_token') }
+function setTokens(access, refresh) {
+  if (access) localStorage.setItem('access_token', access)
+  if (refresh) localStorage.setItem('refresh_token', refresh)
+}
+function clearTokens() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+}
+
+axios.interceptors.request.use(config => {
+  const token = getToken()
+  if (token && !config.headers['Authorization']) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
 axios.interceptors.response.use(
   res => res,
   err => {
@@ -17,32 +41,22 @@ axios.interceptors.response.use(
 
 const currentUser = ref(null)
 
-function getToken() { return localStorage.getItem('access_token') }
-function getRefreshToken() { return localStorage.getItem('refresh_token') }
-function setTokens(access, refresh) {
-  localStorage.setItem('access_token', access)
-  localStorage.setItem('refresh_token', refresh)
-}
-function clearTokens() {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
-}
-
-function authHeaders() {
-  return { Authorization: `Bearer ${getToken()}` }
-}
-
 async function fetchSelfInfo() {
   try {
-    const { data } = await axios.get(`${GW}/user/self_info/`, { headers: authHeaders() })
+    const { data } = await axios.get(`${GW}/user/self_info/`)
     currentUser.value = {
       user_id: data.user_db.id,
       username: data.user_db.username,
       role: data.user_db.role,
       is_active: data.user_db.is_active,
+      avatarUrl: avatarUrl(data.user_db.avatar),
     }
     return true
   } catch { return false }
+}
+
+function updateAvatar(uuid) {
+  if (currentUser.value) currentUser.value.avatarUrl = avatarUrl(uuid)
 }
 
 async function login(username, password) {
@@ -54,21 +68,22 @@ async function login(username, password) {
   await fetchSelfInfo()
 }
 
-async function register(username, password) {
+async function register(username, password, avatarUuid = null) {
   const body = new FormData()
   body.append('username', username)
   body.append('password', password)
-  await axios.post(`${GW}/user/register/`, body)
-  await login(username, password)
+  if (avatarUuid) body.append('avatar_uuid', avatarUuid)
+  const { data } = await axios.post(`${GW}/user/register/`, body)
+  await login(username, password, data.avatar_uuid || avatarUuid)
 }
 
 async function logout() {
   try {
-    await axios.post(`${GW}/user/logout/`, {}, { headers: authHeaders() })
+    await axios.post(`${GW}/user/logout/`, {})
   } finally {
     clearTokens()
     currentUser.value = null
   }
 }
 
-export { GW, currentUser, getToken, authHeaders, fetchSelfInfo, login, register, logout }
+export { GW, avatarUrl, currentUser, getToken, fetchSelfInfo, updateAvatar, login, register, logout }

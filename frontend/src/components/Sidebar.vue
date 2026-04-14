@@ -26,7 +26,7 @@
           class="user-item"
           @click="selectUser(u)"
         >
-          <div class="avatar-circle">{{ u.username[0].toUpperCase() }}</div>
+          <UserAvatar :url="avatarUrl(u.avatar)" :username="u.username" />
           <span>{{ u.username }}</span>
         </div>
       </div>
@@ -40,7 +40,7 @@
         :class="['user-item', activeRecipient?.id === u.id && 'active']"
         @click="$emit('open-chat', u)"
       >
-        <div class="avatar-circle">{{ u.username[0].toUpperCase() }}</div>
+        <UserAvatar :url="avatarUrl(u.avatar)" :username="u.username" />
         <span>{{ u.username }}</span>
         <span
           :class="['online-dot', usersOnline[u.id] && 'online']"
@@ -50,8 +50,13 @@
     </div>
 
     <div class="sidebar-footer">
-      <span class="me-name">{{ meName }}</span>
       <button class="btn btn-ghost btn-sm" @click="$emit('logout')">Выйти</button>
+      <span class="me-name">{{ meName }}</span>
+      <label class="my-avatar" title="Сменить аватар">
+        <input type="file" accept="image/*" hidden @change="onAvatarChange" />
+        <UserAvatar :url="currentUser?.avatarUrl" :username="meName" />
+        <div class="my-avatar-overlay">📷</div>
+      </label>
     </div>
   </div>
 </template>
@@ -59,6 +64,11 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { searchUsers } from '../useChat'
+import { currentUser, updateAvatar, fetchSelfInfo } from '../useAuth'
+import { avatarUrl } from '../useAuth'
+import { uploadAvatar, linkFile } from '../useMedia'
+import { showToast } from '../useToast'
+import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
   users: Array,
@@ -74,6 +84,20 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const searchInputRef = ref(null)
 let searchTimer = null
+
+async function onAvatarChange(e) {
+  const file = e.target.files[0]
+  if (!file || !currentUser.value) return
+  e.target.value = ''
+  try {
+    const uuid = await uploadAvatar(file, currentUser.value.user_id)
+    await linkFile(uuid)
+    updateAvatar(uuid)
+    showToast('Аватар обновлён', 'success')
+  } catch {
+    showToast('Не удалось загрузить аватар', 'error')
+  }
+}
 
 async function toggleSearch() {
   searchOpen.value = !searchOpen.value
@@ -237,7 +261,30 @@ function selectUser(u) {
   background: rgba(0,0,0,.15);
 }
 
-.me-name { color: #aaa; font-weight: 600; }
+.me-name { color: #aaa; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; margin-right: 8px; }
+
+.my-avatar {
+  position: relative;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.my-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.my-avatar:hover .my-avatar-overlay { opacity: 1; }
 
 .btn {
   padding: 10px 18px;

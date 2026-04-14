@@ -12,8 +12,10 @@
       "disabled": true
     },
     "security/cors": {
+      "allow_credentials": true,
       "allow_origins": [
-        "*"
+        "http://{{ env \"SERVER_NAME\" }}",
+        "https://{{ env \"SERVER_NAME\" }}"
       ],
       "allow_methods": [
         "GET",
@@ -26,10 +28,12 @@
         "Origin",
         "Authorization",
         "Content-Type",
-        "Accept"
+        "Accept",
+        "Cookie"
       ],
       "expose_headers": [
-        "Content-Length"
+        "Content-Length",
+        "Set-Cookie"
       ],
       "max_age": "12h"
     }

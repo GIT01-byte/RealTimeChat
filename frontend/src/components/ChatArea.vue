@@ -3,7 +3,7 @@
     <div class="chat-header">
       <button v-if="isMobile && activeRecipient" class="back-btn" @click="$emit('back')">←</button>
       <template v-if="activeRecipient">
-        <div class="avatar-circle">{{ activeRecipient.username[0].toUpperCase() }}</div>
+        <UserAvatar :url="avatarUrl(activeRecipient.avatar)" :username="activeRecipient.username" />
         <span>{{ activeRecipient.username }}</span>
       </template>
       <span v-else class="no-chat">Выберите собеседника</span>
@@ -117,6 +117,8 @@ import { ref, watch, nextTick } from 'vue'
 import { showToast } from '../useToast'
 import { uploadFiles, linkFile } from '../useMedia'
 import MessageMedia from './MessageMedia.vue'
+import UserAvatar from './UserAvatar.vue'
+import { avatarUrl } from '../useAuth'
 
 const props = defineProps({
   messages: Array,
@@ -262,15 +264,6 @@ async function send() {
   cursor: pointer;
   padding: 0 8px 0 0;
   line-height: 1;
-}
-
-.avatar-circle {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: #7c6af7;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: #fff;
-  flex-shrink: 0;
 }
 
 .messages-box {

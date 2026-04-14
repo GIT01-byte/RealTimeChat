@@ -1,5 +1,5 @@
 from core.app_redis.client import get_redis_client
-from core.db.repositories import UsersRepo
+from core.db import UsersRepo
 from core.schemas.users import UserRead, UserSelfInfo
 from core.settings import settings
 from exceptions.exceptions import (

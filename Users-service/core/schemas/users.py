@@ -1,18 +1,15 @@
 from datetime import datetime
-from typing import Any, List, Optional
-from uuid import UUID
+from typing import Any
 
 from fastapi import Form
 from pydantic import BaseModel
 
 
-class AvatarFileRead(BaseModel):
-    model_config = {"from_attributes": True}
-
-    uuid: UUID
-    s3_url: str
-    category: str
-    content_type: str
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    avatar: str | None = None
+    profile: Any | None = None
 
 
 class UserRead(BaseModel):
@@ -20,10 +17,10 @@ class UserRead(BaseModel):
 
     id: int
     username: str
-    profile: Optional[Any] = None
+    avatar: str | None = None
+    profile: Any | None = None
     is_active: bool
     role: str
-    avatar: List[AvatarFileRead] = []
 
 
 class JWTPayload(BaseModel):

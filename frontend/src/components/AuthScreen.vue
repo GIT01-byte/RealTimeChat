@@ -26,6 +26,15 @@
     </form>
 
     <form v-else class="auth-form" @submit.prevent="handleRegister">
+      <!-- Аватар -->
+      <label class="avatar-pick">
+        <input type="file" accept="image/*" hidden @change="onAvatarPick" />
+        <div class="avatar-preview">
+          <img v-if="avatarPreview" :src="avatarPreview" class="avatar-preview-img" />
+          <span v-else class="avatar-preview-placeholder">+📷</span>
+        </div>
+        <span class="avatar-pick-hint">{{ avatarFile ? avatarFile.name : 'Добавить фото (необязательно)' }}</span>
+      </label>
       <input v-model="username" placeholder="Имя пользователя" required />
       <input v-model="password" type="password" placeholder="Пароль (мин. 8 символов)" required />
       <button class="btn btn-primary" type="submit" :disabled="loading">
@@ -41,11 +50,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { login, register } from '../useAuth'
+import { uploadAvatarAnon } from '../useMedia'
 
-// ───── Настройки приветствия ─────
 const WELCOME_TEXT = 'Мессенджер для общения в реальном времени. Быстро, удобно, без лишнего.'
 const WELCOME_STORAGE_KEY = 'rt_chat_welcome_shown'
-// ─────────────────────────────────
 
 const router = useRouter()
 const tab = ref('login')
@@ -54,6 +62,18 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const showWelcome = ref(false)
+const avatarFile = ref(null)
+const avatarPreview = ref(null)
+const avatarUuidCached = ref(null)
+
+function onAvatarPick(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value)
+  avatarFile.value = file
+  avatarPreview.value = URL.createObjectURL(file)
+  avatarUuidCached.value = null
+}
 
 onMounted(() => {
   if (!localStorage.getItem(WELCOME_STORAGE_KEY)) {
@@ -81,7 +101,14 @@ async function handleRegister() {
   error.value = ''
   loading.value = true
   try {
-    await register(username.value, password.value)
+    if (avatarFile.value && !avatarUuidCached.value) {
+      try {
+        avatarUuidCached.value = await uploadAvatarAnon(avatarFile.value)
+      } catch {
+        // Аватар не обязателен — продолжаем без него
+      }
+    }
+    await register(username.value, password.value, avatarUuidCached.value)
     router.push('/chat')
   } catch (e) {
     error.value = e.response?.data?.detail || 'Ошибка регистрации'
@@ -165,6 +192,44 @@ async function handleRegister() {
 }
 
 .auth-form { display: flex; flex-direction: column; gap: 12px; }
+
+.avatar-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.avatar-preview {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #2a2d3a;
+  border: 2px dashed #3a3d4a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: border-color .2s;
+}
+.avatar-pick:hover .avatar-preview { border-color: #7c6af7; }
+
+.avatar-preview-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-preview-placeholder { font-size: 20px; }
+
+.avatar-pick-hint {
+  font-size: 12px;
+  color: #666;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .auth-form input {
   background: #1c1f2e;

@@ -1,9 +1,11 @@
 from typing import Annotated, Optional
+from uuid import UUID
 
-from core.db.repositories import UsersRepo
+from core.db import UsersRepo
 from core.schemas.users import (
     RefreshRequest,
     TokenResponse,
+    UserCreate,
     UserSelfInfo,
 )
 from exceptions.base import BaseAPIException
@@ -17,7 +19,7 @@ from exceptions.exceptions import (
     RepositoryInternalError,
     UserAlreadyExistsError,
 )
-from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from services.auth_service import (
@@ -84,7 +86,7 @@ async def auth_register_user(
     username: str = Form(..., min_length=3, max_length=64),
     password: str = Form(..., min_length=8),
     profile: Optional[str] = Form(None),
-    avatar_file: Optional[UploadFile] = File(None),
+    avatar_uuid: Optional[str] = Form(None),
 ):
     try:
         auth_service = AuthService()
@@ -120,14 +122,14 @@ async def auth_register_user(
                 logger.warning(f"Некорректный JSON в profile: {profile}")
                 profile_dict = None
 
-        payload = {
-            "username": username,
-            "profile": profile_dict,
-        }
-
-        new_user = await auth_service.register_user_to_db(
-            payload=payload, password=password, avatar_file=avatar_file
+        payload = UserCreate(
+            username=username,
+            profile=profile_dict,
+            avatar=str(avatar_uuid),
+            password=password,
         )
+
+        new_user = await auth_service.register_user_to_db(payload=payload)
 
         return {
             "ok": True,
@@ -136,7 +138,6 @@ async def auth_register_user(
             "role": new_user["role"],
             "avatar_uuid": new_user["avatar_uuid"],
         }
-
     # Обрабатываем уникальные ошибки регистрации и ошибки валидации
     except ValidationError as e:
         logger.error(f"Ошибка валидации RegisterRequest: {e.errors()}")
@@ -243,3 +244,11 @@ async def search_users_test(
             f"Неожиданная ошибка при поиске пользователей по шаблону {search!r}"
         )
         raise RepositoryInternalError("Не удалось выполнить поиск пользователей") from e
+
+
+# Удаление текущего пользователя
+# @auth_usage.delete("/user/")
+# @async_timed_report()
+# async def delete_current_user(
+#     current_user=Depends(get_current_active_user),
+# ):
