@@ -46,7 +46,7 @@ http {
             proxy_set_header X-Request-ID $request_id;
         }
 
-        # KrakenD API Gateway — CORS выставляет сам KrakenD, Nginx не дублирует
+        # KrakenD API Gateway
         location /api-gateway/ {
             client_max_body_size 200M;
 
@@ -66,6 +66,12 @@ http {
             proxy_pass_header Access-Control-Allow-Methods;
             proxy_pass_header Access-Control-Allow-Headers;
             proxy_pass_header Access-Control-Expose-Headers;
+
+            # Добавляем CORS заголовки для обычных запросов (KrakenD no-op не добавляет их)
+            if ($request_method != 'OPTIONS') {
+                add_header Access-Control-Allow-Origin $http_origin always;
+                add_header Access-Control-Allow-Credentials true always;
+            }
 
             add_header X-Request-ID $request_id always;
         }
