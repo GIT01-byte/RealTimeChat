@@ -12,7 +12,6 @@ from core.db.db_manager import db_manager
 from core.models.users import User
 
 
-# TODO add delete current user, update user (avatar update on)
 @time_all_methods(async_timed_report())
 class UsersRepo:
     @staticmethod

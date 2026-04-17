@@ -77,7 +77,7 @@ async def get_chat(user_data: UserData = Depends(get_current_user)):
 @router.post("/messages")
 @inject
 async def send_message(
-    send_message_uc: FromDishka[SendMessageUseCase] = ...,
+    send_message_uc: FromDishka[SendMessageUseCase],
     message: ChatMessageCreate = Body(...),
     current_user: UserData = Depends(get_current_user),
 ):

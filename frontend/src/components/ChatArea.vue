@@ -145,7 +145,9 @@ function isOwn(m) {
 }
 
 function formatTime(ts) {
-  return ts ? new Date(ts).toLocaleTimeString() : new Date().toLocaleTimeString()
+  return ts 
+    ? new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    : new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 }
 
 function hasFiles(m) {

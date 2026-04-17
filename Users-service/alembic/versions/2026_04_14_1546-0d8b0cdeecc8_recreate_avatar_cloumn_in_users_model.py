@@ -11,8 +11,6 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "0d8b0cdeecc8"
@@ -34,9 +32,7 @@ def downgrade() -> None:
     op.create_table(
         "avatar",
         sa.Column("id", sa.INTEGER(), autoincrement=True, nullable=False),
-        sa.Column(
-            "user_id", sa.INTEGER(), autoincrement=False, nullable=False
-        ),
+        sa.Column("user_id", sa.INTEGER(), autoincrement=False, nullable=False),
         sa.Column("uuid", sa.UUID(), autoincrement=False, nullable=False),
         sa.Column(
             "s3_url",
@@ -56,9 +52,7 @@ def downgrade() -> None:
             autoincrement=False,
             nullable=False,
         ),
-        sa.Column(
-            "uploaded_at_s3", sa.VARCHAR(), autoincrement=False, nullable=False
-        ),
+        sa.Column("uploaded_at_s3", sa.VARCHAR(), autoincrement=False, nullable=False),
         sa.Column(
             "created_at",
             postgresql.TIMESTAMP(timezone=True),
