@@ -13,6 +13,4 @@ prometheus-fastapi-instrumentator
 pyjwt
 cryptography
 redis
-sqladmin
 email-validator
-
