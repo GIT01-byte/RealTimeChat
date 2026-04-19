@@ -2,21 +2,9 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from api.auth_deps import clear_cookie_with_tokens, set_tokens_cookie
-from application.infrastructure.security.security import (
-    check_password,
-    create_access_token,
-    hash_password,
-    hash_token,
-)
-from application.infrastructure.security.security import (
-    create_refresh_token as gen_refresh_token,
-)
-from core.db import RefreshTokensRepo, UsersRepo
-from core.models.users import RefreshToken, User
-from core.settings import settings
 from fastapi import Response
 
+from application.configs.settings import settings
 from application.core.schemas.roles import ALL_ROLES, AccessRights
 from application.core.schemas.users import (
     AccessToken,
@@ -40,7 +28,22 @@ from application.exceptions.exceptions import (
 )
 from application.infrastructure.logging import logger
 from application.infrastructure.redis_client import get_redis_client
-from application.utils.time_decorator import async_timed_report, time_all_methods
+from application.infrastructure.security import (
+    check_password,
+    create_access_token,
+    hash_password,
+    hash_token,
+)
+from application.infrastructure.security import (
+    create_refresh_token as gen_refresh_token,
+)
+from application.infrastructure.time_decorator import (
+    async_timed_report,
+    time_all_methods,
+)
+from application.repositories.refresh_tokens_repo import RefreshTokensRepo
+from application.repositories.users_repo import UsersRepo
+from application.web.views.v1.deps import clear_cookie_with_tokens, set_tokens_cookie
 
 
 @time_all_methods(async_timed_report())

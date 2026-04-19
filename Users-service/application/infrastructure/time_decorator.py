@@ -1,8 +1,8 @@
-import time
 import functools
+import time
 from datetime import datetime
 
-from core.settings import settings
+from application.configs.settings import settings
 
 # Включение/выключение декораторов через переменную окружения
 ENABLE_TIME_DECORATOR = settings.app.enable_time_reports

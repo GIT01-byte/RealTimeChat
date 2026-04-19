@@ -1,7 +1,7 @@
 import uvicorn
 
 from application.configs.settings import settings
-from application.utils.logging import logger
+from application.infrastructure.logging import logger
 
 if __name__ == "__main__":
     try:

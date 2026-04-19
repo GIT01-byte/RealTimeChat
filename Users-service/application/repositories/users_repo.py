@@ -1,21 +1,23 @@
 from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.exceptions.base import BaseAPIException
 from application.exceptions.exceptions import (
     EntityNotFoundError,
     RepositoryInternalError,
     UserAlreadyExistsError,
 )
 from application.infrastructure.logging import logger
-from application.utils.time_decorator import async_timed_report, time_all_methods
-from core.db.db_manager import db_manager
-from core.models.users import User
+from application.repositories.database.models.users import User
 
 
-@time_all_methods(async_timed_report())
 class UsersRepo:
-    @staticmethod
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
     async def create_user(
+        self,
         username: str,
         hashed_password: bytes,
         avatar: str | None,
@@ -23,34 +25,28 @@ class UsersRepo:
     ) -> User:
         logger.debug(f"Попытка создания пользователя с именем: {username!r}")
         try:
-            async with db_manager.session_factory() as session:
-                existing_user = await session.scalar(
-                    select(User).filter(or_(User.username == username))
+            existing_user = await self.session.scalar(
+                select(User).filter(or_(User.username == username))
+            )
+            if existing_user:
+                logger.warning(f"Пользователь с именем: {username!r} уже существует")
+                raise UserAlreadyExistsError(
+                    f"Пользователь с именем {username!r} уже существует"
                 )
-                if existing_user:
-                    logger.warning(
-                        f"Пользователь с именем: {username!r} уже существует"
-                    )
-                    raise UserAlreadyExistsError(
-                        f"Пользователь с именем {username!r} уже существует"
-                    )
 
-                new_user = User(
-                    username=username,
-                    hashed_password=hashed_password,
-                    avatar=avatar,
-                    profile=profile,
-                )
-                session.add(new_user)
+            new_user = User(
+                username=username,
+                hashed_password=hashed_password,
+                avatar=avatar,
+                profile=profile,
+            )
+            self.session.add(new_user)
 
-                await session.flush()
-                await session.commit()
-                await session.refresh(new_user)
-                logger.info(
-                    f"Пользователь ID:{new_user.id}, Роль: {new_user.role}, Имя: {new_user.username!r} успешно создан."
-                )
-                return new_user
-        except UserAlreadyExistsError:
+            logger.info(
+                f"Пользователь ID:{new_user.id}, Роль: {new_user.role}, Имя: {new_user.username!r} успешно создан."
+            )
+            return new_user
+        except BaseAPIException:
             raise
         except SQLAlchemyError as e:
             logger.exception(f"Ошибка БД при создании пользователя {username!r}")
@@ -65,19 +61,17 @@ class UsersRepo:
                 "Не удалось создать пользователя из-за неожиданной ошибки"
             ) from e
 
-    @staticmethod
-    async def select_user_by_user_id(user_id: int) -> User:
+    async def select_user_by_user_id(self, user_id: int) -> User:
         logger.debug(f"Попытка выбрать пользователя по ID: {user_id}")
         try:
-            async with db_manager.session_factory() as session:
-                user = await session.scalar(select(User).where(User.id == user_id))
-                if not user:
-                    logger.debug(f"Пользователь с ID: {user_id} не найден.")
-                    raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден.")
-                logger.debug(
-                    f"Найден пользователь ID: {user_id}, имя: {user.username!r}, Роль: {user.role}"
-                )
-                return user
+            user = await self.session.scalar(select(User).where(User.id == user_id))
+            if not user:
+                logger.debug(f"Пользователь с ID: {user_id} не найден.")
+                raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден.")
+            logger.debug(
+                f"Найден пользователь ID: {user_id}, имя: {user.username!r}, Роль: {user.role}"
+            )
+            return user
         except EntityNotFoundError:
             raise
         except SQLAlchemyError as e:
@@ -93,24 +87,22 @@ class UsersRepo:
                 "Не удалось выбрать пользователя по ID из-за неожиданной ошибки"
             ) from e
 
-    @staticmethod
-    async def select_user_by_username(username: str) -> User:
+    async def select_user_by_username(self, username: str) -> User:
         logger.debug(f"Попытка выбрать пользователя по имени: {username!r}")
         try:
-            async with db_manager.session_factory() as session:
-                user = await session.scalar(
-                    select(User).where(User.username == username)
+            user = await self.session.scalar(
+                select(User).where(User.username == username)
+            )
+            if not user:
+                logger.debug(f"Пользователь с именем: {username!r} не найден.")
+                raise EntityNotFoundError(
+                    f"Пользователь с именем {username!r} не найден."
                 )
-                if not user:
-                    logger.debug(f"Пользователь с именем: {username!r} не найден.")
-                    raise EntityNotFoundError(
-                        f"Пользователь с именем {username!r} не найден."
-                    )
-                logger.debug(
-                    f"Найден пользователь с именем: {username!r}, ID: {user.id}, Роль: {user.role}"
-                )
-                return user
-        except EntityNotFoundError:
+            logger.debug(
+                f"Найден пользователь с именем: {username!r}, ID: {user.id}, Роль: {user.role}"
+            )
+            return user
+        except BaseAPIException:
             raise
         except SQLAlchemyError as e:
             logger.exception(f"Ошибка БД при выборе пользователя по имени {username!r}")
@@ -125,15 +117,13 @@ class UsersRepo:
                 "Не удалось выбрать пользователя по имени из-за неожиданной ошибки"
             ) from e
 
-    @staticmethod
-    async def get_all_users():
+    async def get_all_users(self):
         logger.debug("Попытка получить всех пользователей")
         try:
-            async with db_manager.session_factory() as session:
-                all_users = await session.scalars(select(User))
-                users_list = all_users.all()
-                logger.debug(f"Получено пользователей: {len(users_list)}")
-                return users_list
+            all_users = await self.session.scalars(select(User))
+            users_list = all_users.all()
+            logger.debug(f"Получено пользователей: {len(users_list)}")
+            return users_list
         except SQLAlchemyError as e:
             logger.exception("Ошибка БД при получении всех пользователей")
             raise RepositoryInternalError(
@@ -145,29 +135,25 @@ class UsersRepo:
                 "Не удалось получить всех пользователей из-за неожиданной ошибки"
             ) from e
 
-    @staticmethod
-    async def get_all_users_data():
+    async def get_all_users_data(self):
         logger.debug("Попытка получить username и avatar всех пользователей")
         try:
-            async with db_manager.session_factory() as session:
-                all_users_data = await session.scalars(select(User))
-                result = all_users_data.all()
-                users_data_list = [
-                    {"id": user.id, "username": user.username, "avatar": user.avatar}
-                    for user in result
-                ]
-                logger.debug(
-                    f"Получено записей username + avatar: {len(users_data_list)}"
-                )
-                return users_data_list
+            all_users_data = await self.session.scalars(select(User))
+            result = all_users_data.all()
+            users_data_list = [
+                {"id": user.id, "username": user.username, "avatar": user.avatar}
+                for user in result
+            ]
+            logger.debug(f"Получено записей username + avatar: {len(users_data_list)}")
+            return users_data_list
         except SQLAlchemyError as e:
             logger.exception("Ошибка БД при получении username и avatar пользователей")
             raise RepositoryInternalError(
                 "Не удалось получить данные пользователей из-за ошибки базы данных"
             ) from e
 
-    @staticmethod
     async def update_user(
+        self,
         user_id: int,
         username: str | None = None,
         avatar: str | None = None,
@@ -192,37 +178,32 @@ class UsersRepo:
         """
         logger.debug(f"[UsersRepo] Обновление пользователя ID={user_id}")
         try:
-            async with db_manager.session_factory() as session:
-                user = await session.scalar(select(User).where(User.id == user_id))
-                if not user:
-                    logger.warning(f"[UsersRepo] Пользователь ID={user_id} не найден")
-                    raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден")
+            user = await self.session.scalar(select(User).where(User.id == user_id))
+            if not user:
+                logger.warning(f"[UsersRepo] Пользователь ID={user_id} не найден")
+                raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден")
 
-                if username is not None:
-                    existing = await session.scalar(
-                        select(User).where(
-                            User.username == username, User.id != user_id
-                        )
-                    )
-                    if existing:
-                        logger.warning(f"[UsersRepo] Имя {username!r} уже занято")
-                        raise UserAlreadyExistsError()
-                    user.username = username
-
-                if avatar is not None:
-                    user.avatar = avatar
-
-                if profile is not None:
-                    user.profile = profile
-
-                await session.commit()
-                await session.refresh(user)
-                logger.info(
-                    f"[UsersRepo] Пользователь ID={user_id} обновлён: "
-                    f"username={user.username!r}, avatar={user.avatar}"
+            if username is not None:
+                existing = await self.session.scalar(
+                    select(User).where(User.username == username, User.id != user_id)
                 )
-                return user
-        except (EntityNotFoundError, UserAlreadyExistsError):
+                if existing:
+                    logger.warning(f"[UsersRepo] Имя {username!r} уже занято")
+                    raise UserAlreadyExistsError()
+                user.username = username
+
+            if avatar is not None:
+                user.avatar = avatar
+
+            if profile is not None:
+                user.profile = profile
+
+            logger.info(
+                f"[UsersRepo] Пользователь ID={user_id} обновлён: "
+                f"username={user.username!r}, avatar={user.avatar}"
+            )
+            return user
+        except BaseAPIException:
             raise
         except SQLAlchemyError as e:
             logger.exception(
@@ -235,8 +216,7 @@ class UsersRepo:
             )
             raise RepositoryInternalError("Не удалось обновить пользователя") from e
 
-    @staticmethod
-    async def delete_user(user_id: int) -> None:
+    async def delete_user(self, user_id: int) -> None:
         """
         Удаляет пользователя из БД.
 
@@ -249,14 +229,12 @@ class UsersRepo:
         """
         logger.debug(f"[UsersRepo] Удаление пользователя ID={user_id}")
         try:
-            async with db_manager.session_factory() as session:
-                user = await session.scalar(select(User).where(User.id == user_id))
-                if not user:
-                    logger.warning(f"[UsersRepo] Пользователь ID={user_id} не найден")
-                    raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден")
-                await session.delete(user)
-                await session.commit()
-                logger.info(f"[UsersRepo] Пользователь ID={user_id} удалён")
+            user = await self.session.scalar(select(User).where(User.id == user_id))
+            if not user:
+                logger.warning(f"[UsersRepo] Пользователь ID={user_id} не найден")
+                raise EntityNotFoundError(f"Пользователь с ID {user_id} не найден")
+            await self.session.delete(user)
+            logger.info(f"[UsersRepo] Пользователь ID={user_id} удалён")
         except EntityNotFoundError:
             raise
         except SQLAlchemyError as e:
@@ -270,24 +248,22 @@ class UsersRepo:
             )
             raise RepositoryInternalError("Не удалось удалить пользователя") from e
 
-    @staticmethod
-    async def search_users(search_query: str) -> list[dict]:
+    async def search_users(self, search_query: str) -> list[dict]:
         logger.debug(f"Попытка поиска пользователей по шаблону: {search_query!r}")
         try:
             search_pattern = f"%{search_query}%"
-            async with db_manager.session_factory() as session:
-                users_data = await session.scalars(
-                    select(User).filter(User.username.ilike(search_pattern))
-                )
-                result = users_data.all()
-                users_data_list = [
-                    {"id": user.id, "username": user.username, "avatar": user.avatar}
-                    for user in result
-                ]
-                logger.debug(
-                    f"Найдено пользователей по запросу {search_query!r}: {len(users_data_list)}"
-                )
-                return users_data_list
+            users_data = await self.session.scalars(
+                select(User).filter(User.username.ilike(search_pattern))
+            )
+            result = users_data.all()
+            users_data_list = [
+                {"id": user.id, "username": user.username, "avatar": user.avatar}
+                for user in result
+            ]
+            logger.debug(
+                f"Найдено пользователей по запросу {search_query!r}: {len(users_data_list)}"
+            )
+            return users_data_list
         except SQLAlchemyError as e:
             logger.exception(
                 f"Ошибка БД при поиске пользователей по шаблону {search_query!r}"

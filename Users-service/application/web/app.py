@@ -4,19 +4,19 @@ Main application, include fastapi routers and configurate it
 
 from contextlib import asynccontextmanager
 
-from core.settings import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from api import api_router
+from application.configs.settings import settings
 from application.infrastructure.logging import logger
 from application.integrations.http_client import close_http_client, init_http_client
-from application.utils.middlewares import (
+from application.web.middlewares import (
     register_dev_log_middleware,
     register_errors_handlers,
     register_prod_log_middleware,
 )
+from application.web.views import router as api_router
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
 if settings.app.mode == "DEV":

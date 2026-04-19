@@ -1,15 +1,9 @@
-from application.infrastructure.security.security import (
-    ACCESS_TOKEN_TYPE,
-    REFRESH_TOKEN_TYPE,
-    decode_access_token,
-)
-from core.db import UsersRepo
-from core.settings import settings
 from fastapi import Depends, Response
 from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
 from redis import Redis
 
+from application.configs.settings import settings
 from application.core.schemas.users import UserRead, UserSelfInfo
 from application.exceptions.exceptions import (
     AccessTokenRevokedError,
@@ -20,11 +14,21 @@ from application.exceptions.exceptions import (
 )
 from application.infrastructure.logging import logger
 from application.infrastructure.redis_client import get_redis_client
-from application.utils.time_decorator import async_timed_report, sync_timed_report
+from application.infrastructure.security import (
+    ACCESS_TOKEN_TYPE,
+    REFRESH_TOKEN_TYPE,
+    decode_access_token,
+)
+from application.infrastructure.time_decorator import (
+    async_timed_report,
+    sync_timed_report,
+)
+from application.repositories.users_repo import UsersRepo
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login/")
 
 
+# TODO move cookie logic in service layer
 @sync_timed_report()
 def clear_cookie_with_tokens(response: Response) -> Response:
     """

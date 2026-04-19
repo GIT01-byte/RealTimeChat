@@ -14,9 +14,8 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from core.models.base import Base
-
-from .mixins import (
+from application.repositories.database.models.base import Base
+from application.repositories.database.models.mixins import (
     created_at,
     intpk,
     str_64,

@@ -5,9 +5,9 @@ from typing import Union
 
 import bcrypt
 import jwt
-from core.settings import settings
 
-from application.core.schemas import AccessToken, JWTPayload
+from application.configs.settings import settings
+from application.core.schemas.users import AccessToken, JWTPayload
 from application.exceptions.exceptions import InvalidTokenError
 from application.infrastructure.logging import logger
 

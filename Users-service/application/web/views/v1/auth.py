@@ -1,13 +1,5 @@
 from typing import Annotated, Optional
 
-from api.auth_deps import (
-    get_current_active_user,
-)
-from application.infrastructure.security.security import (
-    ACCESS_TOKEN_TYPE,
-    decode_access_token,
-)
-from core.db import UsersRepo
 from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
@@ -33,15 +25,22 @@ from application.exceptions.exceptions import (
     UserNotFoundError,
 )
 from application.infrastructure.logging import logger
+from application.infrastructure.security import (
+    ACCESS_TOKEN_TYPE,
+    decode_access_token,
+)
+from application.infrastructure.time_decorator import async_timed_report
+from application.repositories.users_repo import UsersRepo
 from application.services.auth_service import (
     AuthService,
 )
-from application.utils.time_decorator import async_timed_report
+from application.web.views.v1.deps import get_current_active_user
 
 # Роутеры для аутентификации и разработки
 router = APIRouter(redirect_slashes=False)
 
 
+# TODO add commiter in repo use
 @router.get("/health_check")
 async def health_check():
     return {

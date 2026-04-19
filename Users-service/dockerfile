@@ -11,6 +11,6 @@ RUN poetry config virtualenvs.create false \
 
 COPY . /app/
 
-RUN python /scripts/gen_keys.py
+RUN python /app/scripts/gen_keys.py
 
 EXPOSE 8002
