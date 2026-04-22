@@ -1,8 +1,0 @@
-[build]
-dockerfilePath = "dockerfile"
-
-[deploy]
-startCommand = "alembic upgrade head && python main.py"
-healthcheckPath = "/users/health_check"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
