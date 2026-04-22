@@ -19,7 +19,10 @@ async def get_current_user(request: Request):
         auth_token = request.headers.get("authorization")
 
         if not auth_token:
-            raise HTTPException(status_code=500, detail="Authorization token missing.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Authorization token missing.",
+            )
 
         logger.debug(f"Попытка авторизации через {KRAKEND_URL}/user/self_info/")
         login_response = await client.get(
