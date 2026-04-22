@@ -1,15 +1,11 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
-
-from fastapi import Response
 
 from application.configs.settings import settings
 from application.core.schemas.roles import ALL_ROLES, AccessRights
 from application.core.schemas.users import (
     AccessToken,
     TokenResponse,
-    UserCreate,
     UserRead,
 )
 from application.exceptions.exceptions import (
@@ -19,10 +15,8 @@ from application.exceptions.exceptions import (
     RedisConnectionError,
     RefreshTokenExpiredError,
     RefreshUserTokensFailedError,
-    RegistrationFailedError,
     RepositoryInternalError,
     RevokeTokenFailedError,
-    UserAlreadyExistsError,
     UserInactiveError,
     ValidateAuthUserFailedError,
 )
@@ -31,7 +25,6 @@ from application.infrastructure.redis_client import get_redis_client
 from application.infrastructure.security import (
     check_password,
     create_access_token,
-    hash_password,
     hash_token,
 )
 from application.infrastructure.security import (
@@ -44,6 +37,7 @@ from application.infrastructure.time_decorator import (
 from application.repositories.refresh_tokens_repo import RefreshTokensRepo
 from application.repositories.users_repo import UsersRepo
 from application.web.views.v1.deps import clear_cookie_with_tokens, set_tokens_cookie
+from fastapi import Response
 
 
 @time_all_methods(async_timed_report())
@@ -171,43 +165,43 @@ class AuthService:
             )
             raise ValidateAuthUserFailedError() from e
 
-    async def register_user_to_db(
-        self, payload: UserCreate
-    ) -> dict[str, str | UUID | None]:
-        logger.info(f"[AuthService] Регистрация пользователя {payload.username!r}")
-        try:
-            hashed_password = hash_password(payload.password)
+    # async def register_user_to_db(
+    #     self, payload: UserCreate
+    # ) -> dict[str, str | UUID | None]:
+    #     logger.info(f"[AuthService] Регистрация пользователя {payload.username!r}")
+    #     try:
+    #         hashed_password = hash_password(payload.password)
 
-            created_user = await UsersRepo.create_user(
-                username=payload.username,
-                hashed_password=hashed_password,
-                avatar=payload.avatar,
-                profile=payload.profile,
-            )
-            if not created_user:
-                raise RegistrationFailedError(
-                    "User registration failed: no user returned"
-                )
+    #         created_user = await UsersRepo.create_user(
+    #             username=payload.username,
+    #             hashed_password=hashed_password,
+    #             avatar=payload.avatar,
+    #             profile=payload.profile,
+    #         )
+    #         if not created_user:
+    #             raise RegistrationFailedError(
+    #                 "User registration failed: no user returned"
+    #             )
 
-            logger.info(
-                f"[AuthService] Пользователь {payload.username!r} зарегистрирован: "
-                f"ID={created_user.id}, роль={created_user.role}, аватар={created_user.avatar}"
-            )
-            return {
-                "user_id": str(created_user.id),
-                "new_username": created_user.username,
-                "role": created_user.role,
-                "avatar_uuid": created_user.avatar,
-            }
-        except (UserAlreadyExistsError, RepositoryInternalError):
-            raise
-        except Exception as e:
-            logger.exception(
-                f"[AuthService] Ошибка регистрации {payload.username!r}: {e}"
-            )
-            raise RegistrationFailedError(
-                f"Internal error during registration: {e}"
-            ) from e
+    #         logger.info(
+    #             f"[AuthService] Пользователь {payload.username!r} зарегистрирован: "
+    #             f"ID={created_user.id}, роль={created_user.role}, аватар={created_user.avatar}"
+    #         )
+    #         return {
+    #             "user_id": str(created_user.id),
+    #             "new_username": created_user.username,
+    #             "role": created_user.role,
+    #             "avatar_uuid": created_user.avatar,
+    #         }
+    #     except (UserAlreadyExistsError, RepositoryInternalError):
+    #         raise
+    #     except Exception as e:
+    #         logger.exception(
+    #             f"[AuthService] Ошибка регистрации {payload.username!r}: {e}"
+    #         )
+    #         raise RegistrationFailedError(
+    #             f"Internal error during registration: {e}"
+    #         ) from e
 
     async def revoke_token(self, jti: str, expire: int) -> None:
         logger.debug(f"[AuthService] Отзыв токена JTI={jti!r}")

@@ -1,6 +1,6 @@
 import sys
 
-from core.settings import settings
+from application.configs.settings import settings
 from loguru import logger
 
 if settings.app.mode != "TEST":

@@ -1,17 +1,14 @@
-from typing import Annotated, Optional
-
-from fastapi import APIRouter, Depends, Form, Request, Response
-from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import ValidationError
+from typing import Annotated
 
 from application.core.schemas.users import (
     RefreshRequest,
+    RegisterUserUseCaseInput,
     TokenResponse,
-    UserCreate,
     UserRead,
     UserSelfInfo,
     UserUpdate,
 )
+from application.core.use_cases.register_user import RegisterUserUseCase
 from application.exceptions.base import BaseAPIException
 from application.exceptions.exceptions import (
     EntityNotFoundError,
@@ -25,16 +22,16 @@ from application.exceptions.exceptions import (
     UserNotFoundError,
 )
 from application.infrastructure.logging import logger
-from application.infrastructure.security import (
-    ACCESS_TOKEN_TYPE,
-    decode_access_token,
-)
 from application.infrastructure.time_decorator import async_timed_report
 from application.repositories.users_repo import UsersRepo
 from application.services.auth_service import (
     AuthService,
 )
 from application.web.views.v1.deps import get_current_active_user
+from dishka import FromDishka
+from fastapi import APIRouter, Depends, Response
+from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import ValidationError
 
 # Роутеры для аутентификации и разработки
 router = APIRouter(redirect_slashes=False)
@@ -83,79 +80,17 @@ async def auth_login(
 @router.post("/register/")
 @async_timed_report()
 async def auth_register_user(
-    request: Request,
-    response: Response,
-    username: str = Form(..., min_length=3, max_length=64),
-    password: str = Form(..., min_length=8),
-    profile: Optional[str] = Form(None),
-    avatar_uuid: Optional[str] = Form(None),
+    data: RegisterUserUseCaseInput,
+    register_user_uc: FromDishka[RegisterUserUseCase],
 ):
     try:
-        auth_service = AuthService()
-
-        # 1. Проверка на текущего пользователя
-        current_user_token = request.cookies.get(ACCESS_TOKEN_TYPE)
-        if current_user_token:
-            try:
-                payload = decode_access_token(current_user_token)
-
-                # Извлечение данных из токена
-                if payload.jti and payload.sub:
-                    user_id = int(payload.sub)
-                    logger.info(
-                        f"Авто-выход пользователя {user_id} перед новой регистрацией"
-                    )
-
-                    await auth_service.loggout_user_logic(
-                        response=response, access_jti=payload.jti, user_id=user_id
-                    )
-            except (ValueError, TypeError, Exception) as e:
-                logger.warning(f"Не удалось выполнить авто-выход: {e}")
-                pass
-
-        # 2. Регистрируем нового пользователя
-        import json
-
-        profile_dict = None
-        if profile:
-            try:
-                profile_dict = json.loads(profile)
-            except json.JSONDecodeError:
-                logger.warning(f"Некорректный JSON в profile: {profile}")
-                profile_dict = None
-
-        payload = UserCreate(
-            username=username,
-            profile=profile_dict,
-            avatar=str(avatar_uuid),
-            password=password,
-        )
-
-        new_user = await auth_service.register_user_to_db(payload=payload)
-
-        return {
-            "ok": True,
-            "user_id": new_user["user_id"],
-            "new_username": new_user["new_username"],
-            "role": new_user["role"],
-            "avatar_uuid": new_user["avatar_uuid"],
-        }
-    # Обрабатываем уникальные ошибки регистрации и ошибки валидации
-    except ValidationError as e:
-        logger.error(f"Ошибка валидации RegisterRequest: {e.errors()}")
-        raise RegistrationFailedError(detail="Ошибка валидации данных")
-    except ValueError as e:
-        err_msg = str(e)
-        if "уже существует" in err_msg:
-            raise UserAlreadyExistsError()
-        logger.error(f'Ошибка регистрации, exc_info="{err_msg}"')
-        raise RegistrationFailedError(detail=err_msg)
-    except Exception as e:
-        err_msg = str(e)
-        if "уже существует" in err_msg:
-            raise UserAlreadyExistsError()
-        logger.exception(f"Ошибка регистрации: {e}")
-        raise RegistrationFailedError()
+        register_user_uc_output = await register_user_uc.execute(data=data)
+        return register_user_uc_output
+    except BaseAPIException:
+        raise
+    except Exception as ex:
+        logger.error(f"[API] Регистрация пользователя прошла неудачно: {ex}")
+        raise RegistrationFailedError() from ex
 
 
 # Обновление JWT-токенов

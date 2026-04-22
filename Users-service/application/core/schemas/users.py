@@ -14,7 +14,11 @@ class RegisterUserUseCaseInput(BaseModel):
     avatar_uuid: Optional[str] = Field(None)
 
 
-class RegisterUserUseCaseOutput(BaseModel): ...
+class RegisterUserUseCaseOutput(BaseModel):
+    user_id: str
+    new_username: str
+    role: str
+    avatar_uuid: str | None = None
 
 
 class UserCreate(BaseModel):

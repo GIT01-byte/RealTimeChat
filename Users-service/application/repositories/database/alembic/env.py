@@ -1,18 +1,16 @@
 import asyncio
-from logging.config import fileConfig
 import os
 import sys
+from logging.config import fileConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from alembic import context
+from application.configs.settings import settings
+from application.repositories.database.models.base import Base
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
-
-from core.models import Base
-from core.settings import settings
 
 print(f"Metadata models keys: {Base.metadata.tables.keys()}")
 # this is the Alembic Config object, which provides

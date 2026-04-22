@@ -1,19 +1,15 @@
 import json
-from uuid import UUID
 
-from application.configs.settings import settings
 from application.core.schemas.users import (
     RegisterUserUseCaseInput,
+    RegisterUserUseCaseOutput,
     UserCreate,
 )
 from application.exceptions.base import BaseAPIException
 from application.exceptions.exceptions import (
-    LogoutUserFailedError,
-    RedisConnectionError,
     RegistrationFailedError,
 )
 from application.infrastructure.logging import logger
-from application.infrastructure.redis_client import get_redis_client
 from application.infrastructure.security import (
     ACCESS_TOKEN_TYPE,
     decode_access_token,
@@ -22,8 +18,7 @@ from application.infrastructure.security import (
 from application.repositories.database.commiter import Commiter
 from application.repositories.refresh_tokens_repo import RefreshTokensRepo
 from application.repositories.users_repo import UsersRepo
-from application.web.views.v1.deps import clear_cookie_with_tokens
-from fastapi import Response
+from application.services.loggout_user_service import LoggoutUserService
 
 
 class RegisterUserUseCase:
@@ -31,10 +26,12 @@ class RegisterUserUseCase:
         self,
         users_repo: UsersRepo,
         refresh_tokens_repo: RefreshTokensRepo,
+        loggout_user_service: LoggoutUserService,
         commiter: Commiter,
     ) -> None:
         self.users_repo = users_repo
         self.refresh_tokens_repo = refresh_tokens_repo
+        self.loggout_user_service = loggout_user_service
         self.commiter = commiter
 
     async def execute(self, data: RegisterUserUseCaseInput):
@@ -49,24 +46,29 @@ class RegisterUserUseCase:
                     if payload.jti and payload.sub:
                         user_id = int(payload.sub)
                         logger.info(
-                            f"Авто-выход пользователя {user_id} перед новой регистрацией"
+                            f"[RegisterUser] Авто-выход пользователя {user_id} перед новой регистрацией"
                         )
 
-                        await self._loggout_user(
+                        await self.loggout_user_service.loggout_user(
                             response=data.response,
                             access_jti=payload.jti,
                             user_id=user_id,
                         )
-                except (ValueError, TypeError, Exception) as e:
-                    logger.warning(f"Не удалось выполнить авто-выход: {e}")
+                except Exception as e:
+                    logger.warning(
+                        f"[RegisterUser] Не удалось выполнить авто-выход: {e}"
+                    )
                     pass
-            # 1. Подготавливаем данные для БД
+
+            # 2. Подготавливаем данные для БД
             profile_dict = None
             if data.profile:
                 try:
                     profile_dict = json.loads(data.profile)
                 except json.JSONDecodeError:
-                    logger.warning(f"Некорректный JSON в profile: {data.profile}")
+                    logger.warning(
+                        f"[RegisterUser] Некорректный JSON в profile: {data.profile}"
+                    )
                     profile_dict = None
             payload = UserCreate(
                 username=data.username,
@@ -75,20 +77,24 @@ class RegisterUserUseCase:
                 password=data.password,
             )
 
-            # 2. Региструрем пользователя
+            # 3. Региструрем пользователя
             new_user = await self._register_user_to_db(payload=payload)
 
-            return RegisterUserUseCaseOutput()
-
+            return new_user
         except BaseAPIException:
             raise
-        except Exception:
-            ...
+        except Exception as e:
+            logger.exception(
+                f"[RegisterUser] Неожиданная ошибка регистрации пользователя: {data.username}: {e}"
+            )
+            raise RegistrationFailedError(
+                detail=f"Failed to register user {data.username}"
+            ) from e
 
     async def _register_user_to_db(
         self, payload: UserCreate
-    ) -> dict[str, str | UUID | None]:
-        logger.info(f"[AuthService] Регистрация пользователя {payload.username!r}")
+    ) -> RegisterUserUseCaseOutput:
+        logger.info(f"[RegisterUser] Регистрация пользователя {payload.username!r}")
         try:
             hashed_password = hash_password(payload.password)
 
@@ -99,46 +105,27 @@ class RegisterUserUseCase:
                 profile=payload.profile,
             )
             if not created_user:
-                raise RegistrationFailedError(
-                    "User registration failed: no user returned"
+                logger.error(
+                    f"[RegisterUser] Пользователь {payload.username!r} не зарегистрирован из-за ошибки БД"
                 )
+                raise RegistrationFailedError()
 
             logger.info(
-                f"[AuthService] Пользователь {payload.username!r} зарегистрирован: "
+                f"[RegisterUser] Пользователь {payload.username!r} зарегистрирован: "
                 f"ID={created_user.id}, роль={created_user.role}, аватар={created_user.avatar}"
             )
-            return {
-                "user_id": str(created_user.id),
-                "new_username": created_user.username,
-                "role": created_user.role,
-                "avatar_uuid": created_user.avatar,
-            }
+            return RegisterUserUseCaseOutput(
+                user_id=str(created_user.id),
+                new_username=created_user.username,
+                role=created_user.role,
+                avatar_uuid=created_user.avatar,
+            )
         except BaseAPIException:
             raise
         except Exception as e:
             logger.exception(
-                f"[AuthService] Ошибка регистрации {payload.username!r}: {e}"
+                f"[RegisterUser] Ошибка регистрации {payload.username!r}: {e}"
             )
             raise RegistrationFailedError(
-                f"Internal error during registration: {e}"
+                detail=f"Failed to register user {payload.username}"
             ) from e
-
-    async def _loggout_user(
-        self, response: Response, access_jti: str, user_id: int
-    ) -> None:
-        logger.info(f"[AuthService] Выход пользователя ID={user_id}")
-        try:
-            redis_conn = await get_redis_client()
-            if not redis_conn:
-                raise RedisConnectionError()
-
-            clear_cookie_with_tokens(response)
-            ttl = settings.jwt.access_token_expire_minutes * 60
-            await redis_conn.setex(f"blacklist:access:{access_jti}", ttl, "1")
-            await self.refresh_tokens_repo.invalidate_all_refresh_tokens(user_id)
-            logger.info(f"[AuthService] Пользователь ID={user_id} вышел из системы")
-        except Exception as e:
-            logger.exception(
-                f"[AuthService] Ошибка выхода пользователя ID={user_id}: {e}"
-            )
-            raise LogoutUserFailedError() from e

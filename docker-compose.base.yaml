@@ -188,7 +188,7 @@ services:
         condition: service_healthy
       rt_chat-users-redis:
         condition: service_healthy
-    command: ["bash", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8002"]
+    command: ["bash", "-c", "alembic upgrade head && python -m application.web"]
     restart: always
     logging:
       driver: json-file
