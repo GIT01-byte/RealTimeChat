@@ -1,8 +1,20 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import Form
-from pydantic import BaseModel
+from fastapi import Form, Request, Response
+from pydantic import BaseModel, Field
+
+
+class RegisterUserUseCaseInput(BaseModel):
+    request: Request
+    response: Response
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=8)
+    profile: Optional[str] = Field(None)
+    avatar_uuid: Optional[str] = Field(None)
+
+
+class RegisterUserUseCaseOutput(BaseModel): ...
 
 
 class UserCreate(BaseModel):

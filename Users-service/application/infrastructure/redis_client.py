@@ -1,20 +1,19 @@
+from application.configs.settings import settings
 from redis.asyncio import Redis
-from core.settings import settings
-
-_redis_client: Redis | None = None
 
 
-async def get_redis_client() -> Redis:
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = Redis.from_url(
-            settings.redis.REDIS_URL, decode_responses=True, encoding="utf-8"
-        )
-    return _redis_client
+class RedisClient:
+    def __init__(self) -> None:
+        self.url = settings.redis.REDIS_URL
+        self.redis_connection: Redis | None = None
 
+    async def get_redis_client(self) -> Redis:
+        if self.redis_connection is None:
+            self.redis_connection = Redis.from_url(
+                self.url, decode_responses=True, encoding="utf-8"
+            )
+        return self.redis_connection
 
-async def close_redis_client() -> None:
-    global _redis_client
-    if _redis_client is not None:
-        await _redis_client.close()
-        _redis_client = None
+    async def close_redis_client(self) -> None:
+        if self.redis_connection is not None:
+            await self.redis_connection.close()
