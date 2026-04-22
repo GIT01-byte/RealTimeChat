@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
 
-class NotePermissions(BaseModel):
-    """Права на работу с заметками"""
+class ChatPermissions(BaseModel):
+    """Права на работу с чатами"""
 
     create_own: bool = False
     read_own: bool = False
@@ -48,7 +48,7 @@ class SystemPermissions(BaseModel):
 class AccessRights(BaseModel):
     """Полный набор прав доступа"""
 
-    notes: NotePermissions
+    chat: ChatPermissions
     profile: ProfilePermissions
     user_management: UserManagementPermissions
     system: SystemPermissions
@@ -68,7 +68,7 @@ class RegularUser(UserPermissions):
     name = "user"
     description = "Обычный пользователь"
     rights = AccessRights(
-        notes=NotePermissions(
+        chat=ChatPermissions(
             create_own=True,
             read_own=True,
             edit_own=True,
@@ -109,7 +109,7 @@ class AdminUser(UserPermissions):
     name = "admin"
     description = "Администратор системы"
     rights = AccessRights(
-        notes=NotePermissions(
+        chat=ChatPermissions(
             create_own=True,
             read_own=True,
             edit_own=True,
@@ -150,7 +150,7 @@ class ModeratorUser(UserPermissions):
     name = "moderator"
     description = "Модератор контента"
     rights = AccessRights(
-        notes=NotePermissions(
+        chat=ChatPermissions(
             create_own=True,
             read_own=True,
             edit_own=True,
@@ -191,7 +191,7 @@ class ReadOnlyUser(UserPermissions):
     name = "readonly"
     description = "Пользователь с правами только на чтение"
     rights = AccessRights(
-        notes=NotePermissions(
+        chat=ChatPermissions(
             create_own=False,
             read_own=True,
             edit_own=False,
@@ -226,51 +226,9 @@ class ReadOnlyUser(UserPermissions):
     )
 
 
-class GuestUser(UserPermissions):
-    """Гостевой пользователь"""
-
-    name = "guest"
-    description = "Гостевой доступ"
-    rights = AccessRights(
-        notes=NotePermissions(
-            create_own=False,
-            read_own=False,
-            edit_own=False,
-            delete_own=False,
-            read_all=False,
-            edit_all=False,
-            delete_all=False,
-        ),
-        profile=ProfilePermissions(
-            view_own=True,
-            edit_own=False,
-            change_password=False,
-            change_avatar=False,
-            delete_own=False,
-        ),
-        user_management=UserManagementPermissions(
-            view_all_users=False,
-            create_users=False,
-            edit_users=False,
-            delete_users=False,
-            block_users=False,
-            change_roles=False,
-        ),
-        system=SystemPermissions(
-            access_admin_panel=False,
-            view_logs=False,
-            manage_settings=False,
-            monitor_system=False,
-            manage_storage=False,
-            view_analytics=False,
-        ),
-    )
-
-
 ALL_ROLES = {
     "user": RegularUser(),
     "admin": AdminUser(),
     "moderator": ModeratorUser(),
     "readonly": ReadOnlyUser(),
-    "guest": GuestUser(),
 }
