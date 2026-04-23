@@ -1,8 +1,8 @@
 import json
 
 from application.core.schemas.users import (
-    RegisterUserUseCaseInput,
-    RegisterUserUseCaseOutput,
+    RegisterUserUseCaseInputDTO,
+    RegisterUserUseCaseOutputDTO,
     UserCreate,
 )
 from application.exceptions.base import BaseAPIException
@@ -16,28 +16,31 @@ from application.infrastructure.security import (
     hash_password,
 )
 from application.repositories.database.commiter import Commiter
-from application.repositories.refresh_tokens_repo import RefreshTokensRepo
 from application.repositories.users_repo import UsersRepo
-from application.services.loggout_user_service import LoggoutUserService
+from application.services.users_service import UsersService
+from fastapi import Request, Response
 
 
 class RegisterUserUseCase:
     def __init__(
         self,
         users_repo: UsersRepo,
-        refresh_tokens_repo: RefreshTokensRepo,
-        loggout_user_service: LoggoutUserService,
+        users_service: UsersService,
         commiter: Commiter,
     ) -> None:
         self.users_repo = users_repo
-        self.refresh_tokens_repo = refresh_tokens_repo
-        self.loggout_user_service = loggout_user_service
+        self.users_service = users_service
         self.commiter = commiter
 
-    async def execute(self, data: RegisterUserUseCaseInput):
+    async def execute(
+        self,
+        data: RegisterUserUseCaseInputDTO,
+        request: Request,
+        response: Response,
+    ):
         try:
             # 1. Проверка на текущего пользователя
-            current_user_token = data.request.cookies.get(ACCESS_TOKEN_TYPE)
+            current_user_token = request.cookies.get(ACCESS_TOKEN_TYPE)
             if current_user_token:
                 try:
                     payload = decode_access_token(current_user_token)
@@ -49,8 +52,8 @@ class RegisterUserUseCase:
                             f"[RegisterUser] Авто-выход пользователя {user_id} перед новой регистрацией"
                         )
 
-                        await self.loggout_user_service.loggout_user(
-                            response=data.response,
+                        await self.users_service.loggout_user(
+                            response=response,
                             access_jti=payload.jti,
                             user_id=user_id,
                         )
@@ -93,7 +96,7 @@ class RegisterUserUseCase:
 
     async def _register_user_to_db(
         self, payload: UserCreate
-    ) -> RegisterUserUseCaseOutput:
+    ) -> RegisterUserUseCaseOutputDTO:
         logger.info(f"[RegisterUser] Регистрация пользователя {payload.username!r}")
         try:
             hashed_password = hash_password(payload.password)
@@ -110,19 +113,23 @@ class RegisterUserUseCase:
                 )
                 raise RegistrationFailedError()
 
+            await self.commiter.commit()
             logger.info(
                 f"[RegisterUser] Пользователь {payload.username!r} зарегистрирован: "
                 f"ID={created_user.id}, роль={created_user.role}, аватар={created_user.avatar}"
             )
-            return RegisterUserUseCaseOutput(
+
+            return RegisterUserUseCaseOutputDTO(
                 user_id=str(created_user.id),
                 new_username=created_user.username,
                 role=created_user.role,
                 avatar_uuid=created_user.avatar,
             )
         except BaseAPIException:
+            await self.commiter.rollback()
             raise
         except Exception as e:
+            await self.commiter.rollback()
             logger.exception(
                 f"[RegisterUser] Ошибка регистрации {payload.username!r}: {e}"
             )

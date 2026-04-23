@@ -1,13 +1,14 @@
 from typing import Annotated
 
 from application.core.schemas.users import (
-    RefreshRequest,
-    RegisterUserUseCaseInput,
+    RefreshTokensUseCaseInputDTO,
+    RegisterUserUseCaseInputDTO,
     TokenResponse,
     UserRead,
     UserSelfInfo,
     UserUpdate,
 )
+from application.core.use_cases.refresh_tokens import RefreshTokensUseCase
 from application.core.use_cases.register_user import RegisterUserUseCase
 from application.exceptions.base import BaseAPIException
 from application.exceptions.exceptions import (
@@ -24,12 +25,10 @@ from application.exceptions.exceptions import (
 from application.infrastructure.logging import logger
 from application.infrastructure.time_decorator import async_timed_report
 from application.repositories.users_repo import UsersRepo
-from application.services.auth_service import (
-    AuthService,
-)
+from application.services.users_service import UsersService
 from application.web.views.v1.deps import get_current_active_user
 from dishka import FromDishka
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 
@@ -80,11 +79,15 @@ async def auth_login(
 @router.post("/register/")
 @async_timed_report()
 async def auth_register_user(
-    data: RegisterUserUseCaseInput,
+    data: RegisterUserUseCaseInputDTO,
+    request: Request,
+    response: Response,
     register_user_uc: FromDishka[RegisterUserUseCase],
 ):
     try:
-        register_user_uc_output = await register_user_uc.execute(data=data)
+        register_user_uc_output = await register_user_uc.execute(
+            data=data, request=request, response=response
+        )
         return register_user_uc_output
     except BaseAPIException:
         raise
@@ -97,27 +100,20 @@ async def auth_register_user(
 @router.post("/tokens/refresh/", response_model=TokenResponse)
 @async_timed_report()
 async def auth_refresh_jwt(
-    data: RefreshRequest,
+    data: RefreshTokensUseCaseInputDTO,
     response: Response,
+    refresh_tokens_uc: FromDishka[RefreshTokensUseCase],
 ):
     try:
-        auth_service = AuthService()
-        # Выполняем обновление токенов
-        pair = await auth_service.refresh(
-            response=response, raw_token=data.refresh_token
+        refresh_tokens_uc_output = await refresh_tokens_uc.execute(
+            data=data, response=response
         )
-        return TokenResponse(
-            access_token=pair.access_token,
-            access_expire=pair.access_expire,
-            refresh_token=pair.refresh_token,
-        )
-    except ValidationError as e:
-        logger.error(f"Ошибка валидации RegisterRequest: {e.errors()}")
-    except EntityNotFoundError:
+        return refresh_tokens_uc_output
+    except BaseAPIException:
         raise
     except Exception as ex:
-        logger.error(f"Обновление токенов прошло неудачно: {ex}")
-        raise RefreshUserTokensFailedError()
+        logger.error(f"[API] Регистрация пользователя прошла неудачно: {ex}")
+        raise RefreshUserTokensFailedError() from ex
 
 
 # Выход пользователя (разлогинивание)
@@ -125,13 +121,13 @@ async def auth_refresh_jwt(
 @async_timed_report()
 async def auth_logout_user(
     response: Response,
+    users_service: FromDishka[UsersService],
     current_user: UserSelfInfo = Depends(get_current_active_user),
 ):
     user_id = current_user.user_db.id
     logger.debug(f"Попытка выхода пользователя user_id={user_id}")
     try:
-        auth_service = AuthService()
-        await auth_service.loggout_user_logic(
+        await users_service.loggout_user(
             response=response,
             access_jti=current_user.jwt_payload.jti,
             user_id=user_id,

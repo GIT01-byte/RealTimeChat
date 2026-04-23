@@ -1,8 +1,3 @@
-from fastapi import Depends, Response
-from fastapi.security import OAuth2PasswordBearer
-from jwt import PyJWTError
-from redis import Redis
-
 from application.configs.settings import settings
 from application.core.schemas.users import UserRead, UserSelfInfo
 from application.exceptions.exceptions import (
@@ -13,7 +8,7 @@ from application.exceptions.exceptions import (
     UserNotFoundError,
 )
 from application.infrastructure.logging import logger
-from application.infrastructure.redis_client import get_redis_client
+from application.infrastructure.redis_client import RedisClient
 from application.infrastructure.security import (
     ACCESS_TOKEN_TYPE,
     REFRESH_TOKEN_TYPE,
@@ -24,6 +19,10 @@ from application.infrastructure.time_decorator import (
     sync_timed_report,
 )
 from application.repositories.users_repo import UsersRepo
+from dishka import FromDishka
+from fastapi import Depends, Response
+from fastapi.security import OAuth2PasswordBearer
+from jwt import PyJWTError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login/")
 
@@ -81,8 +80,9 @@ def set_tokens_cookie(response: Response, access_token: str, refresh_token: str)
 
 @async_timed_report()
 async def get_current_user_from_token(
+    redis_client: FromDishka[RedisClient],
+    users_repo: FromDishka[UsersRepo],
     token: str = Depends(oauth2_scheme),
-    redis: Redis = Depends(get_redis_client),
 ) -> UserSelfInfo:
     """
     Возвращает текущего активного пользователя на основании JWT-токена.
@@ -95,6 +95,7 @@ async def get_current_user_from_token(
     :return: Словарь с данными текущего пользователя, jti (уникального ID JWT-токена), iat (время последнего входа в систему)
     """
     try:
+        # Декодируем JWT-токен
         payload = decode_access_token(token)
 
         # Извлекаем данные из токена
@@ -102,11 +103,12 @@ async def get_current_user_from_token(
             raise InvalidTokenError("Missing required claims: sub or jti")
 
         # Проверка чёрного списка Redis
-        if await redis.exists(f"blacklist:access:{payload.jti}"):
+        redis_client = await redis_client.get_redis_client()
+        if await redis_client.exists(f"blacklist:access:{payload.jti}"):
             raise AccessTokenRevokedError()
 
         # Запрашиваем пользователя из базы данных
-        db_user = await UsersRepo.select_user_by_user_id(int(payload.sub))
+        db_user = await users_repo.select_user_by_user_id(int(payload.sub))
 
         # Проверяем полученного user'а
         if not db_user:
