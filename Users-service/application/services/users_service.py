@@ -1,3 +1,4 @@
+from application.configs.settings import settings
 from application.core.schemas.roles import ALL_ROLES, AccessRights
 from application.exceptions.exceptions import (
     EntityNotFoundError,
@@ -9,9 +10,9 @@ from application.infrastructure.logging import logger
 from application.repositories.database.commiter import Commiter
 from application.repositories.database.models.users import User
 from application.repositories.users_repo import UsersRepo
+from application.services.cookie_service import CookieService
 from application.services.redis_service import RedisService
 from application.services.tokens_service import TokensService
-from application.web.views.v1.deps import clear_cookie_with_tokens
 from fastapi import Response
 
 
@@ -20,11 +21,13 @@ class UsersService:
         self,
         tokens_service: TokensService,
         redis_service: RedisService,
+        cookie_service: CookieService,
         users_repo: UsersRepo,
         commiter: Commiter,
     ) -> None:
         self.tokens_service = tokens_service
         self.redis_service = redis_service
+        self.cookie_service = cookie_service
         self.users_repo = users_repo
         self.commiter = commiter
 
@@ -71,10 +74,13 @@ class UsersService:
         logger.info(f"[AuthService] Выход пользователя ID={user_id}")
         try:
             # 1. Очищение кук
-            clear_cookie_with_tokens(response)
+            self.cookie_service.clear_cookie_with_tokens(response)
 
-            # 2. Установка Redis blacklist
-            await self.redis_service.set_redis_blacklist(access_jti)
+            # 2. Установка access в blacklist
+            ttl = settings.jwt.access_token_expire_minutes * 60
+            await self.redis_service.set_value(
+                f"blacklist:access:{access_jti}", "1", ttl
+            )
 
             # 3. Инвалидация всех refresh токенов
             await self.tokens_service.invalidate_all_refresh_tokens(user_id)

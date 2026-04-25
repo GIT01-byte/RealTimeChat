@@ -4,11 +4,8 @@ Main application, include fastapi routers and configurate it
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from prometheus_fastapi_instrumentator import Instrumentator
-
 from application.configs.settings import settings
+from application.di.container import users_api_container
 from application.infrastructure.logging import logger
 from application.integrations.http_client import close_http_client, init_http_client
 from application.web.middlewares import (
@@ -17,6 +14,10 @@ from application.web.middlewares import (
     register_prod_log_middleware,
 )
 from application.web.views import router as api_router
+from dishka.integrations.fastapi import setup_dishka
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Включаем отслеживание памяти, для дебага ошибок в ассинхронных функциях
 if settings.app.mode == "DEV":
@@ -68,6 +69,9 @@ def create_app() -> FastAPI:
     else:
         logger.exception(f"[APP] Invalide app mode: {settings.app.mode}")
         raise RuntimeError(f"[APP] Invalide app mode: {settings.app.mode}")
+
+    # Инитиализируеум dishka
+    setup_dishka(users_api_container, app)
 
     # Подключаем api роутеры
     app.include_router(api_router)

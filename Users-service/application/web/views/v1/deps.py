@@ -1,83 +1,29 @@
-from application.configs.settings import settings
 from application.core.schemas.users import UserRead, UserSelfInfo
 from application.exceptions.exceptions import (
     AccessTokenRevokedError,
     InvalidTokenError,
-    SetCookieFailedError,
     UserInactiveError,
     UserNotFoundError,
 )
 from application.infrastructure.logging import logger
 from application.infrastructure.redis_client import RedisClient
 from application.infrastructure.security import (
-    ACCESS_TOKEN_TYPE,
-    REFRESH_TOKEN_TYPE,
     decode_access_token,
 )
 from application.infrastructure.time_decorator import (
     async_timed_report,
-    sync_timed_report,
 )
 from application.repositories.users_repo import UsersRepo
 from dishka import FromDishka
-from fastapi import Depends, Response
+from dishka.integrations.fastapi import inject
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login/")
 
 
-# TODO move cookie logic in service layer
-@sync_timed_report()
-def clear_cookie_with_tokens(response: Response) -> Response:
-    """
-    Очищает куки с токенами из ответа.
-
-    :param response: Объект Response FastAPI для установки куки
-    :return: Модифицированный ответ
-    """
-    response.delete_cookie(ACCESS_TOKEN_TYPE)
-    response.delete_cookie(REFRESH_TOKEN_TYPE)
-
-    return response
-
-
-@sync_timed_report()
-def set_tokens_cookie(response: Response, access_token: str, refresh_token: str):
-    """
-    Устанавливает и обновляет токены в куки с настройками безопасности.
-
-    :param access_token: Access токен для установки
-    :param access_token: Refresh токен для установки
-    :param response: Объект Response FastAPI для установки куки
-    :raise SetCookieFailedError: Если установка куки прошла неудачно
-    """
-    try:
-        # 1. Очищаем куки
-        clear_cookie_with_tokens(response=response)
-
-        # 2. Устанавляиваем токены в куки
-        response.set_cookie(
-            key=ACCESS_TOKEN_TYPE,
-            value=access_token,
-            httponly=True,  # Доступно только через HTTP
-            secure=True,  # Используется только по HTTPS
-            samesite="strict",  # Предотвращение межсайтового отслеживания
-            max_age=settings.jwt.access_token_expire_minutes * 60,
-        )
-        response.set_cookie(
-            key=REFRESH_TOKEN_TYPE,
-            value=refresh_token,
-            httponly=True,  # Доступно только через HTTP
-            secure=True,  # Используется только по HTTPS
-            samesite="strict",  # Предотвращение межсайтового отслеживания
-            max_age=settings.jwt.refresh_token_expire_days * 60,
-        )
-    except Exception as exc:
-        logger.error(f"Ошибка установки куки: {exc}")
-        raise SetCookieFailedError() from exc
-
-
+@inject
 @async_timed_report()
 async def get_current_user_from_token(
     redis_client: FromDishka[RedisClient],
@@ -124,6 +70,7 @@ async def get_current_user_from_token(
         raise InvalidTokenError()
 
 
+@inject
 @async_timed_report()
 async def get_current_active_user(
     current_user: UserSelfInfo = Depends(get_current_user_from_token),

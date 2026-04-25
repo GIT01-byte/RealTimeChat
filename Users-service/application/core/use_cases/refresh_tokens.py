@@ -1,5 +1,5 @@
 from application.core.schemas.users import (
-    RefreshTokensUseCaseInputDTO,
+    RefreshTokensUCInputDTO,
     TokenResponse,
 )
 from application.exceptions.base import BaseAPIException
@@ -9,9 +9,9 @@ from application.exceptions.exceptions import (
 from application.infrastructure.logging import logger
 from application.repositories.database.commiter import Commiter
 from application.repositories.refresh_tokens_repo import RefreshTokensRepo
+from application.services.cookie_service import CookieService
 from application.services.tokens_service import TokensService
 from application.services.users_service import UsersService
-from application.web.views.v1.deps import set_tokens_cookie
 from fastapi import Response
 
 
@@ -21,16 +21,18 @@ class RefreshTokensUseCase:
         refresh_tokens_repo: RefreshTokensRepo,
         tokens_service: TokensService,
         users_service: UsersService,
+        cookie_service: CookieService,
         commiter: Commiter,
     ) -> None:
         self.refresh_tokens_repo = refresh_tokens_repo
         self.tokens_service = tokens_service
         self.users_service = users_service
+        self.cookie_service = cookie_service
         self.commiter = commiter
 
     async def execute(
         self,
-        data: RefreshTokensUseCaseInputDTO,
+        data: RefreshTokensUCInputDTO,
         response: Response,
     ) -> TokenResponse:
         logger.info("[AuthService] Обновление токенов")
@@ -43,7 +45,7 @@ class RefreshTokensUseCase:
             access_token, refresh_token = await self.tokens_service.issue_tokens(
                 user_id=user.id, user_role=user.role
             )
-            set_tokens_cookie(
+            self.cookie_service.set_tokens_cookie(
                 response=response,
                 access_token=access_token.token,
                 refresh_token=refresh_token,

@@ -1,8 +1,8 @@
 import json
 
 from application.core.schemas.users import (
-    RegisterUserUseCaseInputDTO,
-    RegisterUserUseCaseOutputDTO,
+    RegisterUserUCInputDTO,
+    RegisterUserUCOutputDTO,
     UserCreate,
 )
 from application.exceptions.base import BaseAPIException
@@ -16,6 +16,7 @@ from application.infrastructure.security import (
     hash_password,
 )
 from application.repositories.database.commiter import Commiter
+from application.repositories.database.models.users import User
 from application.repositories.users_repo import UsersRepo
 from application.services.users_service import UsersService
 from fastapi import Request, Response
@@ -34,10 +35,10 @@ class RegisterUserUseCase:
 
     async def execute(
         self,
-        data: RegisterUserUseCaseInputDTO,
+        data: RegisterUserUCInputDTO,
         request: Request,
         response: Response,
-    ):
+    ) -> RegisterUserUCOutputDTO:
         try:
             # 1. Проверка на текущего пользователя
             current_user_token = request.cookies.get(ACCESS_TOKEN_TYPE)
@@ -83,7 +84,12 @@ class RegisterUserUseCase:
             # 3. Региструрем пользователя
             new_user = await self._register_user_to_db(payload=payload)
 
-            return new_user
+            return RegisterUserUCOutputDTO(
+                user_id=str(new_user.id),
+                new_username=new_user.username,
+                role=new_user.role,
+                avatar_uuid=new_user.avatar,
+            )
         except BaseAPIException:
             raise
         except Exception as e:
@@ -94,9 +100,7 @@ class RegisterUserUseCase:
                 detail=f"Failed to register user {data.username}"
             ) from e
 
-    async def _register_user_to_db(
-        self, payload: UserCreate
-    ) -> RegisterUserUseCaseOutputDTO:
+    async def _register_user_to_db(self, payload: UserCreate) -> User:
         logger.info(f"[RegisterUser] Регистрация пользователя {payload.username!r}")
         try:
             hashed_password = hash_password(payload.password)
@@ -119,12 +123,7 @@ class RegisterUserUseCase:
                 f"ID={created_user.id}, роль={created_user.role}, аватар={created_user.avatar}"
             )
 
-            return RegisterUserUseCaseOutputDTO(
-                user_id=str(created_user.id),
-                new_username=created_user.username,
-                role=created_user.role,
-                avatar_uuid=created_user.avatar,
-            )
+            return created_user
         except BaseAPIException:
             await self.commiter.rollback()
             raise

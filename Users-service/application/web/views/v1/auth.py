@@ -1,8 +1,9 @@
 from typing import Annotated
 
 from application.core.schemas.users import (
-    RefreshTokensUseCaseInputDTO,
-    RegisterUserUseCaseInputDTO,
+    RefreshTokensUCInputDTO,
+    RegisterUserUCInputDTO,
+    RegisterUserUCOutputDTO,
     TokenResponse,
     UserRead,
     UserSelfInfo,
@@ -27,7 +28,7 @@ from application.infrastructure.time_decorator import async_timed_report
 from application.repositories.users_repo import UsersRepo
 from application.services.users_service import UsersService
 from application.web.views.v1.deps import get_current_active_user
-from dishka import FromDishka
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
@@ -49,12 +50,12 @@ async def health_check():
 
 # Вход пользователя с выдачей токенов
 @router.post("/login/", response_model=TokenResponse)
+@inject
 @async_timed_report()
 async def auth_login(
     response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ):
     try:
-        auth_service = AuthService()
         if not form_data.password:
             raise PasswordRequiredError()
 
@@ -76,14 +77,15 @@ async def auth_login(
 
 
 # Регистрация нового пользователя
-@router.post("/register/")
+@router.post("/register/", response_model=RegisterUserUCOutputDTO)
+@inject
 @async_timed_report()
 async def auth_register_user(
-    data: RegisterUserUseCaseInputDTO,
+    register_user_uc: FromDishka[RegisterUserUseCase],
     request: Request,
     response: Response,
-    register_user_uc: FromDishka[RegisterUserUseCase],
-):
+    data: RegisterUserUCInputDTO,
+) -> RegisterUserUCOutputDTO:
     try:
         register_user_uc_output = await register_user_uc.execute(
             data=data, request=request, response=response
@@ -98,12 +100,13 @@ async def auth_register_user(
 
 # Обновление JWT-токенов
 @router.post("/tokens/refresh/", response_model=TokenResponse)
+@inject
 @async_timed_report()
 async def auth_refresh_jwt(
-    data: RefreshTokensUseCaseInputDTO,
-    response: Response,
     refresh_tokens_uc: FromDishka[RefreshTokensUseCase],
-):
+    response: Response,
+    data: RefreshTokensUCInputDTO,
+) -> TokenResponse:
     try:
         refresh_tokens_uc_output = await refresh_tokens_uc.execute(
             data=data, response=response
@@ -118,6 +121,7 @@ async def auth_refresh_jwt(
 
 # Выход пользователя (разлогинивание)
 @router.post("/logout/")
+@inject
 @async_timed_report()
 async def auth_logout_user(
     response: Response,
@@ -125,15 +129,13 @@ async def auth_logout_user(
     current_user: UserSelfInfo = Depends(get_current_active_user),
 ):
     user_id = current_user.user_db.id
-    logger.debug(f"Попытка выхода пользователя user_id={user_id}")
     try:
         await users_service.loggout_user(
             response=response,
             access_jti=current_user.jwt_payload.jti,
             user_id=user_id,
         )
-        logger.info(f"Пользователь user_id={user_id} успешно вышел")
-        return {"detail": "Выход выполнен успешно"}
+        return {"detail": "Logout succesfull"}
     except BaseAPIException:
         raise
     except Exception as e:
@@ -143,6 +145,7 @@ async def auth_logout_user(
 
 # Получение информации о себе (авторизованном пользователе)
 @router.get("/me/")
+@inject
 @async_timed_report()
 async def auth_user_check_self_info(
     current_user=Depends(get_current_active_user),
@@ -152,6 +155,7 @@ async def auth_user_check_self_info(
 
 # Обновленеи текущего пользователя
 @router.patch("/me/", response_model=UserRead)
+@inject
 @async_timed_report()
 async def update_current_user(
     data: UserUpdate,
@@ -187,6 +191,7 @@ async def update_current_user(
 
 # Удаление текущего пользователя
 @router.delete("/me/", status_code=204)
+@inject
 @async_timed_report()
 async def delete_current_user(
     response: Response,
@@ -219,6 +224,7 @@ async def delete_current_user(
 
 # Получение всех публичных пользователей
 @router.get("/get_all_users/")
+@inject
 async def get_all_user():
     try:
         logger.info("Попытка получения данных пользователей")
@@ -231,6 +237,7 @@ async def get_all_user():
 
 # Получение публичных пользователей по поисковому запросу
 @router.get("/search/")
+@inject
 async def search_users_test(
     search: str,
 ):

@@ -5,18 +5,18 @@ from fastapi import Form
 from pydantic import BaseModel, Field
 
 
-class RefreshTokensUseCaseInputDTO(BaseModel):
+class RefreshTokensUCInputDTO(BaseModel):
     raw_token: str
 
 
-class RegisterUserUseCaseInputDTO(BaseModel):
+class RegisterUserUCInputDTO(BaseModel):
     username: str = Field(min_length=3, max_length=64)
     password: str = Field(min_length=8)
     profile: Optional[str] = Field(None)
     avatar_uuid: Optional[str] = Field(None)
 
 
-class RegisterUserUseCaseOutputDTO(BaseModel):
+class RegisterUserUCOutputDTO(BaseModel):
     user_id: str
     new_username: str
     role: str

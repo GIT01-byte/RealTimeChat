@@ -1,6 +1,6 @@
 from application.configs.settings import settings
 from application.infrastructure.logging import logger
-from redis.asyncio import Redis
+from redis import Redis
 
 
 class RedisClient:
@@ -8,7 +8,7 @@ class RedisClient:
         self.url = settings.redis.REDIS_URL
         self.redis_connection: Redis | None = None
 
-    async def get_redis_client(self) -> Redis:
+    def get_redis_client(self) -> Redis:
         try:
             if self.redis_connection is None:
                 self.redis_connection = Redis.from_url(
@@ -19,6 +19,6 @@ class RedisClient:
             logger.error(f"Ошибка подключения к Redis: {str(e)}")
             raise
 
-    async def close_redis_client(self) -> None:
+    def close_redis_client(self) -> None:
         if self.redis_connection is not None:
-            await self.redis_connection.close()
+            self.redis_connection.close()
