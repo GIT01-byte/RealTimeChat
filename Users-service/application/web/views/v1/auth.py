@@ -13,15 +13,12 @@ from application.core.use_cases.refresh_tokens import RefreshTokensUseCase
 from application.core.use_cases.register_user import RegisterUserUseCase
 from application.exceptions.base import BaseAPIException
 from application.exceptions.exceptions import (
-    EntityNotFoundError,
     InvalidCredentialsError,
     LogoutUserFailedError,
     PasswordRequiredError,
     RefreshUserTokensFailedError,
     RegistrationFailedError,
     RepositoryInternalError,
-    UserAlreadyExistsError,
-    UserNotFoundError,
 )
 from application.infrastructure.logging import logger
 from application.infrastructure.time_decorator import async_timed_report
@@ -31,7 +28,6 @@ from application.web.views.v1.deps import get_current_active_user
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import ValidationError
 
 # Роутеры для аутентификации и разработки
 router = APIRouter(redirect_slashes=False)
@@ -53,27 +49,27 @@ async def health_check():
 @inject
 @async_timed_report()
 async def auth_login(
-    response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    users_service: FromDishka[UsersService],
+    response: Response,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ):
     try:
         if not form_data.password:
             raise PasswordRequiredError()
 
         # Авторизация пользователя
-        user = await auth_service.authenticate_user(
+        users_tokens = await users_service.authenticate_user(
             response, form_data.username, form_data.password
         )
-        if not user:
+        if not users_tokens:
             raise InvalidCredentialsError()
 
-        return TokenResponse(
-            access_token=user.access_token,
-            access_expire=user.access_expire,
-            refresh_token=user.refresh_token,
-        )
-
-    except ValidationError as e:
-        logger.error(f"Ошибка валидации RegisterRequest: {e.errors()}")
+        return users_tokens
+    except BaseAPIException:
+        raise
+    except Exception as ex:
+        logger.error(f"[API] Регистрация пользователя прошла неудачно: {ex}")
+        raise RegistrationFailedError() from ex
 
 
 # Регистрация нового пользователя
@@ -124,8 +120,8 @@ async def auth_refresh_jwt(
 @inject
 @async_timed_report()
 async def auth_logout_user(
-    response: Response,
     users_service: FromDishka[UsersService],
+    response: Response,
     current_user: UserSelfInfo = Depends(get_current_active_user),
 ):
     user_id = current_user.user_db.id
@@ -158,6 +154,7 @@ async def auth_user_check_self_info(
 @inject
 @async_timed_report()
 async def update_current_user(
+    users_repo: FromDishka[UsersRepo],
     data: UserUpdate,
     current_user: UserSelfInfo = Depends(get_current_active_user),
 ):
@@ -170,7 +167,7 @@ async def update_current_user(
         f"[API] PATCH /me/ user_id={user_id} data={data.model_dump(exclude_none=True)}"
     )
     try:
-        updated = await UsersRepo.update_user(
+        updated = await users_repo.update_user(
             user_id=user_id,
             username=data.username,
             avatar=data.avatar,
@@ -178,7 +175,7 @@ async def update_current_user(
         )
         logger.info(f"[API] Пользователь ID={user_id} успешно обновлён")
         return UserRead.model_validate(updated)
-    except (EntityNotFoundError, UserNotFoundError, UserAlreadyExistsError):
+    except BaseAPIException:
         raise
     except RepositoryInternalError:
         raise
@@ -194,6 +191,8 @@ async def update_current_user(
 @inject
 @async_timed_report()
 async def delete_current_user(
+    users_service: FromDishka[UsersService],
+    users_repo: FromDishka[UsersRepo],
     response: Response,
     current_user: UserSelfInfo = Depends(get_current_active_user),
 ):
@@ -203,15 +202,14 @@ async def delete_current_user(
     user_id = current_user.user_db.id
     logger.info(f"[API] DELETE /me/ user_id={user_id}")
     try:
-        auth_service = AuthService()
-        await auth_service.loggout_user_logic(
+        await users_service.loggout_user(
             response=response,
             access_jti=current_user.jwt_payload.jti,
             user_id=user_id,
         )
-        await UsersRepo.delete_user(user_id=user_id)
+        await users_repo.delete_user(user_id=user_id)
         logger.info(f"[API] Пользователь ID={user_id} удалён")
-    except (EntityNotFoundError, UserNotFoundError):
+    except BaseAPIException:
         raise
     except RepositoryInternalError:
         raise
@@ -225,11 +223,17 @@ async def delete_current_user(
 # Получение всех публичных пользователей
 @router.get("/get_all_users/")
 @inject
-async def get_all_user():
+async def get_all_user(
+    users_repo: FromDishka[UsersRepo],
+):
     try:
         logger.info("Попытка получения данных пользователей")
-        users = await UsersRepo.get_all_users_data()
+        users = await users_repo.get_all_users_data()
         return {"users": users}
+    except BaseAPIException:
+        raise
+    except RepositoryInternalError:
+        raise
     except Exception as e:
         logger.error(f"Ошибка при получении списка пользователей: {e}")
         raise RepositoryInternalError(detail="Failed to get users list")
@@ -240,12 +244,15 @@ async def get_all_user():
 @inject
 async def search_users_test(
     search: str,
+    users_repo: FromDishka[UsersRepo],
 ):
     logger.debug(f"Поиск пользователей по шаблону: {search!r}")
     try:
-        users = await UsersRepo.search_users(search_query=search)
+        users = await users_repo.search_users(search_query=search)
         logger.debug(f"Поиск {search!r}: найдено {len(users)} пользователей")
         return {"users": users}
+    except BaseAPIException:
+        raise
     except RepositoryInternalError:
         raise
     except Exception as e:

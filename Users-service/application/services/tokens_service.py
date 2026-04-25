@@ -78,7 +78,7 @@ class TokensService:
                 raise RefreshTokenExpiredError()
 
             return stored
-        except (EntityNotFoundError, RefreshTokenExpiredError):
+        except BaseAPIException:
             raise
         except Exception as e:
             logger.exception(

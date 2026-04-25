@@ -20,7 +20,7 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login/")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login/")
 
 
 @inject
@@ -49,8 +49,8 @@ async def get_current_user_from_token(
             raise InvalidTokenError("Missing required claims: sub or jti")
 
         # Проверка чёрного списка Redis
-        redis_client = await redis_client.get_redis_client()
-        if await redis_client.exists(f"blacklist:access:{payload.jti}"):
+        redis = redis_client.get_redis_client()
+        if redis.exists(f"blacklist:access:{payload.jti}"):
             raise AccessTokenRevokedError()
 
         # Запрашиваем пользователя из базы данных
