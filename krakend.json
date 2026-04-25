@@ -60,7 +60,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/health_check",
+          "url_pattern": "/api/v1/users_service/health_check",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -130,7 +130,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/register/",
+          "url_pattern": "/api/v1/users_service/register/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -143,7 +143,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/login/",
+          "url_pattern": "/api/v1/users_service/login/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -157,7 +157,7 @@
       "input_headers": ["Authorization"],
       "backend": [
         {
-          "url_pattern": "/users/tokens/refresh/",
+          "url_pattern": "/api/v1/users_service/tokens/refresh/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -171,7 +171,7 @@
       "input_headers": ["Authorization"],
       "backend": [
         {
-          "url_pattern": "/users/logout/",
+          "url_pattern": "/api/v1/users_service/logout/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -185,7 +185,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/me/",
+          "url_pattern": "/api/v1/users_service/me/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -199,7 +199,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/me/",
+          "url_pattern": "/api/v1/users_service/me/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -213,7 +213,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/me/",
+          "url_pattern": "/api/v1/users_service/me/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -226,7 +226,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/get_all_users/",
+          "url_pattern": "/api/v1/users_service/get_all_users/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]
@@ -240,7 +240,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/users/search/",
+          "url_pattern": "/api/v1/users_service/search/",
           "host": [
             "http://rt_chat-users-api:8002"
           ]

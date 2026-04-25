@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from application.configs.settings import settings
 from application.core.schemas.users import (
     RefreshTokensUCInputDTO,
     RegisterUserUCInputDTO,
@@ -30,7 +31,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 # Роутеры для аутентификации и разработки
-router = APIRouter(redirect_slashes=False)
+router = APIRouter(prefix=settings.api.v1.service)
 
 
 # TODO add commiter in repo use

@@ -20,7 +20,7 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login/")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users_service/login/")
 
 
 @inject
