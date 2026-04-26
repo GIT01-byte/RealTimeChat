@@ -1,3 +1,5 @@
+from fastapi import Response
+
 from application.configs.settings import settings
 from application.core.schemas.roles import ALL_ROLES, AccessRights
 from application.core.schemas.users import (
@@ -23,7 +25,6 @@ from application.repositories.users_repo import UsersRepo
 from application.services.cookie_service import CookieService
 from application.services.redis_service import RedisService
 from application.services.tokens_service import TokensService
-from fastapi import Response
 
 
 class UsersService:
@@ -48,7 +49,7 @@ class UsersService:
                 logger.warning(f"[AuthService] Пользователь ID={user_id} неактивен")
                 raise UserInactiveError()
             return user
-        except (EntityNotFoundError, UserInactiveError):
+        except BaseAPIException:
             raise
         except Exception as e:
             logger.exception(
@@ -63,7 +64,7 @@ class UsersService:
                 logger.warning(f"[AuthService] Пользователь {login!r} неактивен")
                 raise UserInactiveError()
             return user
-        except (EntityNotFoundError, UserInactiveError):
+        except BaseAPIException:
             raise
         except Exception as e:
             logger.exception(
