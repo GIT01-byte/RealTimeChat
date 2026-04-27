@@ -5,6 +5,7 @@
       :users="users"
       :users-online="usersOnline"
       :active-recipient="activeRecipient"
+      :loading-users="loadingUsers"
       :ws-connected="wsConnected"
       :me-name="currentUser?.username"
       @open-chat="handleOpenChat"
@@ -16,6 +17,7 @@
       :active-recipient="activeRecipient"
       :current-user="currentUser"
       :is-mobile="isMobile"
+      :loading-history="loadingHistory"
       @send="handleSend"
       @back="activeRecipient = null"
     />
@@ -31,8 +33,9 @@ import Sidebar from './Sidebar.vue'
 import ChatArea from './ChatArea.vue'
 import OnboardingGuide from './OnboardingGuide.vue'
 import { currentUser, logout } from '../useAuth'
+import { showToast } from '../useToast'
 import {
-  users, usersOnline, messages, activeRecipient,
+  users, usersOnline, messages, activeRecipient, loadingUsers, loadingHistory,
   fetchUsers, startPolling, stopPolling,
   openChat, sendMessage, connectWS, disconnectWS,
 } from '../useChat'
@@ -44,6 +47,18 @@ const wsConnected = ref(false)
 const isMobile = ref(window.innerWidth <= 900 && window.innerHeight > window.innerWidth)
 const showOnboarding = ref(false)
 let ws = null
+let wsEverOpened = false
+let wsWarned = false
+
+function warnWsUnavailableOnce() {
+  if (wsWarned) return
+  wsWarned = true
+  showToast(
+    'WebSocket недоступен — сообщения обновляются не мгновенно. Переключайтесь между пользователями, чтобы обновить историю. Мы уже чиним.',
+    'warning',
+    9000
+  )
+}
 
 function onResize() {
   isMobile.value = window.innerWidth <= 900 && window.innerHeight > window.innerWidth
@@ -59,8 +74,19 @@ onMounted(async () => {
   await fetchUsers()
   startPolling()
   ws = connectWS(onIncomingMessage)
-  ws.onopen = () => wsConnected.value = true
-  ws.onclose = () => { wsConnected.value = false }
+  ws.onopen = () => {
+    wsEverOpened = true
+    wsConnected.value = true
+  }
+  ws.onerror = () => {
+    // Если даже не смогли установить соединение — покажем предупреждение один раз.
+    if (!wsEverOpened) warnWsUnavailableOnce()
+  }
+  ws.onclose = () => {
+    wsConnected.value = false
+    // close до onopen (или сразу после попытки) — тоже считаем "неудачным подключением".
+    if (!wsEverOpened) warnWsUnavailableOnce()
+  }
 
   if (!localStorage.getItem(ONBOARDING_KEY)) {
     showOnboarding.value = true

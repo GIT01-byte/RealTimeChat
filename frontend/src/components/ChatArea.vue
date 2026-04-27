@@ -14,7 +14,21 @@
         <div class="empty-icon">💬</div>
         <div class="empty-text">Выберите кому хотели бы отправить сообщение</div>
       </div>
+
+      <template v-else-if="loadingHistory">
+        <div v-for="i in 8" :key="i" class="message skeleton">
+          <div class="sk-bubble shimmer"></div>
+          <div class="sk-meta shimmer"></div>
+        </div>
+      </template>
+
+      <div v-else-if="!messages?.length" class="empty-chat">
+        <div class="empty-icon">🕊️</div>
+        <div class="empty-text">Пока нет сообщений. Напишите первое.</div>
+      </div>
+
       <div
+        v-else
         v-for="(m, i) in messages"
         :key="m.id || i"
         :class="['message', isOwn(m) ? 'outgoing' : 'incoming']"
@@ -125,6 +139,7 @@ const props = defineProps({
   activeRecipient: Object,
   currentUser: Object,
   isMobile: { type: Boolean, default: false },
+  loadingHistory: { type: Boolean, default: false },
 })
 const emit = defineEmits(['send', 'back'])
 
@@ -288,6 +303,52 @@ async function send() {
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.message.skeleton {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.sk-bubble {
+  height: 38px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.sk-meta {
+  margin-top: 6px;
+  height: 10px;
+  width: 64px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -160px;
+  width: 160px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(124,106,247,0.14),
+    transparent
+  );
+  animation: shimmer 1.1s infinite;
+}
+
+@keyframes shimmer {
+  to { left: 100%; }
 }
 
 @media (max-width: 900px) {

@@ -34,7 +34,22 @@
 
     <!-- User list -->
     <div class="user-list">
+      <template v-if="loadingUsers">
+        <div v-for="i in 8" :key="i" class="user-item skeleton">
+          <div class="sk-avatar shimmer"></div>
+          <div class="sk-lines">
+            <div class="sk-line shimmer"></div>
+            <div class="sk-line short shimmer"></div>
+          </div>
+        </div>
+      </template>
+
+      <div v-else-if="!users?.length" class="no-results">
+        Пользователей нет или список не загрузился.
+      </div>
+
       <div
+        v-else
         v-for="u in users"
         :key="u.id"
         :class="['user-item', activeRecipient?.id === u.id && 'active']"
@@ -77,6 +92,7 @@ const props = defineProps({
   activeRecipient: Object,
   wsConnected: Boolean,
   meName: String,
+  loadingUsers: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open-chat', 'logout'])
 
@@ -286,4 +302,57 @@ function selectUser(u) {
 .btn:hover { opacity: .85; }
 .btn-ghost { background: #2a2d3a; color: #aaa; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* Skeletons */
+.user-item.skeleton {
+  cursor: default;
+}
+.user-item.skeleton:hover { background: transparent; }
+
+.sk-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sk-line {
+  height: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  width: 100%;
+}
+.sk-line.short { width: 55%; }
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -120px;
+  width: 120px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(124,106,247,0.14),
+    transparent
+  );
+  animation: shimmer 1.1s infinite;
+}
+
+@keyframes shimmer {
+  to { left: 100%; }
+}
 </style>

@@ -9,16 +9,20 @@ const users = ref([])
 const usersOnline = ref({})
 const messages = ref([])
 const activeRecipient = ref(null)
+const loadingUsers = ref(false)
+const loadingHistory = ref(false)
 let ws = null
 let pollingTimer = null
 
 // ───── USERS ─────
 async function fetchUsers() {
+  loadingUsers.value = true
   try {
     const { data } = await axios.get(`${GW}/chat/`)
     users.value = (data.users_all || []).filter(u => u.id !== currentUser.value?.user_id)
     usersOnline.value = data.users_online || {}
   } catch {}
+  finally { loadingUsers.value = false }
 }
 
 function startPolling() {
@@ -33,11 +37,13 @@ function stopPolling() {
 // ───── MESSAGES ─────
 async function loadHistory(userId) {
   messages.value = []
+  loadingHistory.value = true
   try {
     const { data } = await axios.get(`${GW}/chat/messages/${userId}`)
     const list = Array.isArray(data) ? data : (data.data || [])
     messages.value = list
   } catch {}
+  finally { loadingHistory.value = false }
 }
 
 async function sendMessage(text, fileUuids = { images: [], videos: [], audios: [] }) {
@@ -96,6 +102,7 @@ async function searchUsers(query) {
 
 export {
   users, usersOnline, messages, activeRecipient,
+  loadingUsers, loadingHistory,
   fetchUsers, startPolling, stopPolling,
   loadHistory, sendMessage, openChat,
   connectWS, disconnectWS,

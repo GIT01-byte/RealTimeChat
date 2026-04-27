@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import axios from 'axios'
-import { showToast } from './useToast'
+import { beginRequest, endRequest, showToast } from './useToast'
 
 const GW = import.meta.env.VITE_GW_URL
 
@@ -22,19 +22,50 @@ function clearTokens() {
 }
 
 axios.interceptors.request.use(config => {
+  beginRequest()
   const token = getToken()
   if (token && !config.headers['Authorization']) {
     config.headers['Authorization'] = `Bearer ${token}`
   }
   return config
+}, err => {
+  endRequest()
+  return Promise.reject(err)
 })
 
 axios.interceptors.response.use(
-  res => res,
+  res => {
+    endRequest()
+    return res
+  },
   err => {
+    endRequest()
     if (err.response?.status === 429) {
       showToast('Слишко много запросов. Подождите немного...', 'warning')
+      return Promise.reject(err)
     }
+
+    // Network / CORS / no response
+    if (!err.response) {
+      showToast('Не удалось подключиться к серверу. Проверьте интернет или доступность VPS.', 'error')
+      return Promise.reject(err)
+    }
+
+    // Do not spam for auth redirects/guards; components can handle it
+    if (err.response.status === 401) return Promise.reject(err)
+
+    const detail = err.response.data?.detail
+    if (typeof detail === 'string' && detail.trim()) {
+      showToast(detail, 'error')
+      return Promise.reject(err)
+    }
+
+    if (err.response.status >= 500) {
+      showToast('Ошибка сервера. Попробуйте позже.', 'error')
+      return Promise.reject(err)
+    }
+
+    showToast('Ошибка запроса. Проверьте данные и попробуйте ещё раз.', 'error')
     return Promise.reject(err)
   }
 )
