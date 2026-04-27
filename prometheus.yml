@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: rt_chat-chat-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["rt_chat-chat-api:8001"]
+
+  - job_name: rt_chat-users-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["rt_chat-users-api:8002"]
+
+  - job_name: rt_chat-media-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["rt_chat-media-api:8003"]
+
