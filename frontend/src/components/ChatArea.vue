@@ -554,7 +554,10 @@ async function send() {
   transition: opacity .2s;
   flex-shrink: 0;
 }
-.btn:hover { opacity: .85; }
+.btn:active { opacity: .75; }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { opacity: .85; }
+}
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn-primary { background: #7c6af7; color: #fff; }
 </style>

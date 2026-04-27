@@ -148,12 +148,39 @@ COMPOSE_FILE=docker-compose.base.yaml
 - RabbitMQ
 - Outbox producer воркер
 - Outbox consumer воркер
+- Prometheus + Loki + Grafana (мониторинг и логи)
 
 Подходит для: production, когда важна гарантированная доставка медиафайлов через очередь.
 
 ```env
 COMPOSE_FILE=docker-compose.extended.yaml
 ```
+
+---
+
+## 📈 Мониторинг и логи (VPS)
+
+В extended-конфигурации Prometheus/Loki/Grafana публикуются **только на `127.0.0.1`**, поэтому на VPS они недоступны напрямую из интернета.
+
+### Как открыть Grafana/Prometheus/Loki через SSH-туннель
+
+Запусти туннель с локальной машины (замени `user@your-vps`):
+
+```bash
+# Grafana (localhost:3000)
+ssh -L 3000:127.0.0.1:3000 user@your-vps
+
+# Prometheus (localhost:9090)
+ssh -L 9090:127.0.0.1:9090 user@your-vps
+
+# Loki (localhost:3100)
+ssh -L 3100:127.0.0.1:3100 user@your-vps
+```
+
+После этого открывай:
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+- Loki: `http://localhost:3100`
 
 ---
 

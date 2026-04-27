@@ -349,6 +349,68 @@ services:
     networks:
       - app-network
 
+  # --- Monitoring / Logs (Prometheus + Loki + Grafana) ---
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    container_name: rt_chat-prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  loki:
+    image: grafana/loki:3.5.1
+    container_name: rt_chat-loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    command: ["-config.file=/etc/loki/config.yml"]
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  promtail:
+    image: grafana/promtail:3.5.1
+    container_name: rt_chat-promtail
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: ["-config.file=/etc/promtail/config.yml"]
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    container_name: rt_chat-grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - prometheus
+      - loki
+
 volumes:
   postgres_data_rt_chat:
   redis_data_chat:
@@ -357,6 +419,9 @@ volumes:
   postgres_data_media:
   rabbitmq_data:
     driver: local
+  prometheus_data:
+  loki_data:
+  grafana_data:
 
 networks:
   app-network:
