@@ -203,9 +203,9 @@ services:
     command: -p 5434
     container_name: rt_chat-media-postgres
     environment:
-      POSTGRES_DB: ${MEDIA_DB_NAME}
-      POSTGRES_USER: ${MEDIA_DB_USER}
-      POSTGRES_PASSWORD: ${MEDIA_DB_PWD}
+      POSTGRES_DB: ${MEDIA__DB__NAME}
+      POSTGRES_USER: ${MEDIA__DB__USER}
+      POSTGRES_PASSWORD: ${MEDIA__DB__PWD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p 5434 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -232,19 +232,21 @@ services:
     container_name: rt_chat-media-api
     ports:
       - "8003:8003"
+    env_file:
+      - ./.env
     environment:
-      MEDIA_APP_MODE: ${MEDIA_APP_MODE}
+      MEDIA__APP__MODE: ${MEDIA__APP__MODE}
 
-      MEDIA_DB_HOST: rt_chat-media-postgres
-      MEDIA_DB_PORT: 5434
-      MEDIA_DB_NAME: ${MEDIA_DB_NAME}
-      MEDIA_DB_USER: ${MEDIA_DB_USER}
-      MEDIA_DB_PWD: ${MEDIA_DB_PWD}
+      MEDIA__DB__HOST: rt_chat-media-postgres
+      MEDIA__DB__PORT: 5434
+      MEDIA__DB__NAME: ${MEDIA__DB__NAME}
+      MEDIA__DB__USER: ${MEDIA__DB__USER}
+      MEDIA__DB__PWD: ${MEDIA__DB__PWD}
 
-      MEDIA_S3_ACCESSKEY: ${MEDIA_S3_ACCESSKEY}
-      MEDIA_S3_SECRETKEY: ${MEDIA_S3_SECRETKEY}
-      MEDIA_S3_ENDPOINTURL: ${MEDIA_S3_ENDPOINTURL}
-      MEDIA_S3_BUCKETNAME: ${MEDIA_S3_BUCKETNAME}
+      MEDIA__S3__ACCESSKEY: ${MEDIA__S3__ACCESSKEY}
+      MEDIA__S3__SECRETKEY: ${MEDIA__S3__SECRETKEY}
+      MEDIA__S3__ENDPOINTURL: ${MEDIA__S3__ENDPOINTURL}
+      MEDIA__S3__BUCKETNAME: ${MEDIA__S3__BUCKETNAME}
     depends_on:
       rt_chat-media-clamav:
         condition: service_started

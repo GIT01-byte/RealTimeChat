@@ -73,12 +73,16 @@ class OutboxSettings(BaseModel):
     poll_interval: float = 1.0
 
 
+class CategoriesSettings(BaseModel):
+    use_env_overrides: bool
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(ENV_PATH),
         case_sensitive=False,
-        env_nested_delimiter="_",
-        env_prefix="MEDIA_",
+        env_nested_delimiter="__",
+        env_prefix="MEDIA__",
     )
     app: AppConfig
     api: ApiPrefix = ApiPrefix()
@@ -86,6 +90,7 @@ class Settings(BaseSettings):
     s3: S3Settings
     rabbitmq: Optional[RabbitMQSettings] = None
     outbox: Optional[OutboxSettings] = None
+    categories: CategoriesSettings
 
 
 settings = Settings()  # type: ignore
@@ -96,6 +101,10 @@ if settings:
     print(f"INFO:     Run mode: {settings.app.mode}")
     print(f"INFO:     Database url: {settings.db.DB_URL_asyncpg}")
     print(f"INFO:     S3 url: {settings.s3.endpointurl}/{settings.s3.bucketname}")
+    print(
+        "INFO:     Category rules env overrides: "
+        f"{'ENABLED' if settings.categories.use_env_overrides else 'disabled'}"
+    )
     if settings.outbox:
         print(f"INFO:     Outbox poll interval: {settings.outbox.poll_interval}")
     if settings.rabbitmq:
